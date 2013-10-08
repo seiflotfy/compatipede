@@ -1,0 +1,4 @@
+mozcompat
+=========
+
+Automating Compatibility
