@@ -65,21 +65,19 @@ class Tab(WebKit.WebView):
         self._tab_type = tab_type
         self._doms = []
         self._subframes = []
+        self._css = {}
         self._settings = self.get_settings()
+        self._redirects = []
 
         self.connect('frame-created', self._on_frame_created)
         self.connect('resource-request-starting',
                      self._on_resource_request_starting)
+        self.connect('resource-load-finished',
+                     self._on_resource_load_finished)
 
         self.set_user_agent(user_agent)
-        self.load_uri(uri)
+        self.load_uri("http://%s" % uri)
         self.set_title("%s %s" % (tab_type, uri))
-
-    def close(self):
-        self.window.destroy()
-
-    def set_title(self, title):
-        self.window.set_title(title)
 
     @property
     def document(self):
@@ -95,6 +93,30 @@ class Tab(WebKit.WebView):
                                  self._subframes)
         return set([self.get_main_frame()] + self._subframes)
 
+    @property
+    def ready(self):
+        return self.get_load_status() == WebKit.LoadStatus.FINISHED
+
+    @property
+    def source(self):
+        return self.document.get_document_element().get_outer_html()
+
+    @property
+    def documents(self):
+        return self.get_dom_document()
+
+    @property
+    def style_sheets(self):
+        return self._css
+
+    @property
+    def redirects(self):
+        return self._redirects
+
+    def _on_resource_load_finished(self, view, frame, resource):
+        if resource.get_mime_type() == "text/css":
+            self._css[resource.get_uri()] = resource.get_data().str
+
     def _on_frame_created(self, view, frame):
         self._subframes.append(frame)
 
@@ -107,6 +129,11 @@ class Tab(WebKit.WebView):
             for element in elements:
                 element.get_style().set_property("display", "none", "high")
                 #element.get_parent_element().remove_child(element)
+        else:
+            if response:
+                msg = response.get_message()
+                if msg and msg.get_property("status-code") / 100 == 3:
+                    self._redirects.append(request.get_uri())
 
     def _get_element_by_id(self, element, dom=None):
         doms = [dom] if dom else self.doms
@@ -171,6 +198,12 @@ class Tab(WebKit.WebView):
             elements.update(self._find_element_in_dom(element, dom))
         return elements
 
+    def close(self):
+        self.window.destroy()
+
+    def set_title(self, title):
+        self.window.set_title(title)
+
     def simplfy(self):
         self.execute_script(SIMPLFY_SCRIPT)
 
@@ -178,12 +211,14 @@ class Tab(WebKit.WebView):
         self._settings.set_property('user-agent', user_agent)
 
     def get_element_inner_html(self, element):
-        while not self.ready:
+        t = time.time()
+        while not self.ready or time.time() - t <= 15:
             wait(3)
         htmls = [e.get_inner_html() for e in self._find_element_all(element)]
         return list((htmls))
 
-    def take_screenshot(self, path, width=-1, height=-1):
+    def take_screenshot(self, width=-1, height=-1):
+        path = "./screenshots/%s--%s" % (self._uri, self._tab_type)
         dview = self.get_dom_document().get_default_view()
         width = dview.get_inner_width() if width == -1 else width
         height = dview.get_outer_height() if height == -1 else height
@@ -191,39 +226,49 @@ class Tab(WebKit.WebView):
         self.draw(cairo.Context(surf))
         surf.write_to_png(path)
 
-    @property
-    def ready(self):
-        return self.get_load_status() == WebKit.LoadStatus.FINISHED
 
-    @property
-    def source(self):
-        return self.document.get_document_element().get_outer_html()
+def check_source_is_similar(tab1, tab2):
+    tab1.simplfy()
+    tab2.simplfy()
+    diff = difflib.SequenceMatcher(None, tab1.source, tab2.source).ratio
+    return diff >= 0.9
 
-    @property
-    def documents(self):
-        return self.get_dom_document()
+
+def take_screenshots(tab1, tab2):
+    tab1.take_screenshot()
+    tab2.take_screenshot()
+
+
+def have_equal_redirects(tab1, tab2):
+    print "=============================="
+    print tab1.redirects
+    print tab2.redirects
+    return tab1.redirects == tab2.redirects
 
 
 def analyze(links):
     while len(links):
         link = links.pop()
-        ios_tab = Tab("http://%s" % link, IOS_UA, "ios")
-        fos_tab = Tab("http://%s" % link, FOS_UA, "fos")
-
+        link = "google.de"
+        WebKit.set_cache_model(1)
+        fos_tab = Tab(link, FOS_UA, "fos")
+        wait(5)
+        ios_tab = Tab(link, IOS_UA, "ios")
+        wait(5)
         t = time.time()
-        while not (ios_tab.ready and fos_tab.ready) and time.time() - t < 15:
-            wait(1)
+        print not (fos_tab.ready and ios_tab.ready) and time.time() - t < 15
+        if not (fos_tab.ready and ios_tab.ready) and time.time() - t < 15:
+            Gtk.main_iteration_do(False)
 
-        ios_tab.take_screenshot("screenshots/%s--ios" % link)
-        fos_tab.take_screenshot("screenshots/%s--fos" % link)
-        ios_tab.simplfy()
-        fos_tab.simplfy()
+        print "==== %s ====" % link
+        take_screenshots(ios_tab, fos_tab)
+        check = "PASS" if check_source_is_similar(ios_tab, fos_tab) else "FAIL"
+        print "Source Compatibility:", check
+        check = "PASS" if have_equal_redirects(ios_tab, fos_tab) else "FAIL"
+        print "Redirects Compatibility:", check
 
-        diff = difflib.SequenceMatcher(None, ios_tab.source, fos_tab.source)
         ios_tab.close()
         fos_tab.close()
-        print link, diff.ratio()
-        print "--------"
         time.sleep(1)
 
         #TODO:
@@ -241,7 +286,7 @@ def analyze(links):
 
 if __name__ == "__main__":
     mainloop = GLib.MainLoop()
-    root_tab = Tab("http://www.alexa.com/topsites/countries/BR")
+    root_tab = Tab("www.alexa.com/topsites/countries/BR")
     links = root_tab.get_element_inner_html('small topsites-label')
     analyze(links)
     mainloop.run()
