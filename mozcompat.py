@@ -240,23 +240,18 @@ def take_screenshots(tab1, tab2):
 
 
 def have_equal_redirects(tab1, tab2):
-    print "=============================="
-    print tab1.redirects
-    print tab2.redirects
     return tab1.redirects == tab2.redirects
 
 
 def analyze(links):
     while len(links):
         link = links.pop()
-        link = "google.de"
         WebKit.set_cache_model(1)
         fos_tab = Tab(link, FOS_UA, "fos")
         wait(5)
         ios_tab = Tab(link, IOS_UA, "ios")
         wait(5)
         t = time.time()
-        print not (fos_tab.ready and ios_tab.ready) and time.time() - t < 15
         if not (fos_tab.ready and ios_tab.ready) and time.time() - t < 15:
             Gtk.main_iteration_do(False)
 
