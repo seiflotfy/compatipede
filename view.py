@@ -1,0 +1,191 @@
+import cairo
+import os
+import sys
+import time
+
+from gi.repository import GLib
+from gi.repository import Gtk
+from gi.repository import WebKit
+
+from abpy import Filter
+from utils import IOS_UA, FOS_UA, SIMPLFY_SCRIPT
+
+
+adblock = Filter()
+
+if not os.path.exists('screenshots'):
+    os.makedirs('screenshots')
+
+
+class View(WebKit.WebView):
+
+    def __init__(self, uri, tab_type="ios"):
+        WebKit.WebView.__init__(self)
+        self.window = window = Gtk.Window()
+        window.set_size_request(540, 960)
+        scrolled_window = Gtk.ScrolledWindow()
+        window.add(scrolled_window)
+        #window.add(self)
+        scrolled_window.add(self)
+        window.show_all()
+        self._start_time = time.time()
+
+        self._filter = adblock
+        self._uri = uri
+        self._user_agent = FOS_UA if tab_type == "fos" else IOS_UA
+
+        self._tab_type = tab_type
+        self._resources = set([])
+        self._doms = []
+        self._subframes = []
+        self._css = {}
+        self._settings = self.get_settings()
+        self._redirects = []
+        self._settings.set_property("enable-private-browsing", True)
+
+        self.connect('resource-request-starting',
+                     self._on_resource_request_starting)
+        self.connect('resource-load-finished',
+                     self._on_resource_load_finished)
+        self.connect('resource-response-received',
+                     self._on_resource_response_received)
+        self.connect('resource-load-failed',
+                     self._on_resource_load_failed)
+        self.connect('frame-created', self._on_frame_created)
+
+        self.set_user_agent(self._user_agent)
+        self.load_uri("http://%s" % uri)
+        self.set_title("%s %s" % (tab_type, uri))
+        GLib.timeout_add(1000, self._tear_down)
+
+    @property
+    def document(self):
+        return self.get_dom_document()
+
+    @property
+    def source(self):
+        return self.document.get_document_element().get_outer_html()
+
+    @property
+    def style_sheets(self):
+        return self._css
+
+    @property
+    def redirects(self):
+        return self._redirects
+
+    @property
+    def ready(self):
+        return self.get_load_status() == WebKit.LoadStatus.FINISHED\
+            and len(self._resources) == 0
+
+    @property
+    def doms(self):
+        return [frame.get_dom_document() for frame in self.frames]
+
+    @property
+    def frames(self):
+        self._subframes = filter(lambda f: f.get_parent() is not None,
+                                 self._subframes)
+        return set([self.get_main_frame()] + self._subframes)
+
+    def _tear_down(self):
+        print self.ready, self.get_load_status(), self._resources
+        if self.ready or time.time() - self._start_time >= 15:
+            self.take_screenshot()
+            self.simplfy()
+            src = self.source
+            css = self.style_sheets
+            print "redirects", len(self._redirects)
+            print "css", len(css)
+            print len(src)
+            for resource in self._resources:
+                print resource.get_uri()
+            print "----"
+            mainloop.quit()
+            return False
+        return True
+
+    def _on_frame_created(self, view, frame):
+        self._subframes.append(frame)
+
+    def _on_resource_response_received(self, view, frame, resource, response):
+        if resource in self._resources:
+            self._resources.remove(resource)
+
+    def _on_resource_load_failed(self, view, frame, resource, error):
+        if resource in self._resources:
+            self._resources.remove(resource)
+
+    def _on_resource_load_finished(self, view, frame, resource):
+        if resource.get_mime_type() == "text/css":
+            self._css[resource.get_uri()] = resource.get_data().str
+        if resource in self._resources:
+            self._resources.remove(resource)
+
+    def _on_resource_request_starting(self, view, frame, resource,
+                                      request, response):
+        uri = request.get_uri()
+        if self._filter.match(uri):
+            request.set_uri("about:blank")
+            elements = self._find_element_all('[src="%s"]' % uri)
+            for element in elements:
+                element.get_style().set_property("display", "none", "high")
+        else:
+            if response:
+                msg = response.get_message()
+                if msg and msg.get_property("status-code") / 100 == 3:
+                    self._redirects.append(request.get_uri())
+
+    def _query_selector_all(self, element, dom=None):
+        doms = [dom] if dom else self.doms
+        elements = []
+        for dom in doms:
+            try:
+                res = dom.query_selector_all(element)
+                elements += [res.item(i) for i in xrange(res.get_length())]
+            except:
+                pass
+        return elements
+
+    def _find_element_in_dom(self, element, dom):
+        elements = []
+        for e in self._query_selector_all(element, dom):
+            if not e in elements:
+                elements.append(e)
+        return elements
+
+    def _find_element_all(self, element):
+        elements = set()
+        for dom in self.doms:
+            elements.update(self._find_element_in_dom(element, dom))
+        return elements
+
+    def close(self):
+        self.window.destroy()
+
+    def set_title(self, title):
+        self.window.set_title(title)
+
+    def simplfy(self):
+        self.execute_script(SIMPLFY_SCRIPT)
+
+    def set_user_agent(self, user_agent):
+        self._settings.set_property('user-agent', user_agent)
+
+    def take_screenshot(self, width=-1, height=-1):
+        path = "./screenshots/%s--%s" % (self._uri, self._tab_type)
+        dview = self.get_dom_document().get_default_view()
+        width = dview.get_inner_width() if width == -1 else width
+        height = dview.get_outer_height() if height == -1 else height
+        surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+        self.draw(cairo.Context(surf))
+        surf.write_to_png(path)
+
+
+if __name__ == "__main__":
+    uri = sys.argv[1]
+    ua = sys.argv[2]
+    mainloop = GLib.MainLoop()
+    root_view = View(uri, ua)
+    mainloop.run()
