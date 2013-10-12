@@ -68,6 +68,7 @@ class Tab(WebKit.WebView):
         self._css = {}
         self._settings = self.get_settings()
         self._redirects = []
+        self._settings.set_property("enable-private-browsing", True)
 
         self.connect('frame-created', self._on_frame_created)
         self.connect('resource-request-starting',
@@ -95,7 +96,8 @@ class Tab(WebKit.WebView):
 
     @property
     def ready(self):
-        return self.get_load_status() == WebKit.LoadStatus.FINISHED
+        return self.get_load_status() == WebKit.LoadStatus.FINISHED\
+            and self.document is not None
 
     @property
     def source(self):
@@ -213,7 +215,7 @@ class Tab(WebKit.WebView):
     def get_element_inner_html(self, element):
         t = time.time()
         while not self.ready or time.time() - t <= 15:
-            wait(3)
+            wait(1)
         htmls = [e.get_inner_html() for e in self._find_element_all(element)]
         return list((htmls))
 
@@ -243,24 +245,30 @@ def have_equal_redirects(tab1, tab2):
     return tab1.redirects == tab2.redirects
 
 
+def same_styles(tab1, tab2):
+    print tab1.style_sheets.keys()
+    print tab2.style_sheets.keys()
+    return tab1.style_sheets == tab2.style_sheets
+
+
 def analyze(links):
     while len(links):
         link = links.pop()
-        WebKit.set_cache_model(1)
+        link = "twitter.com"
         fos_tab = Tab(link, FOS_UA, "fos")
-        wait(5)
         ios_tab = Tab(link, IOS_UA, "ios")
-        wait(5)
         t = time.time()
-        if not (fos_tab.ready and ios_tab.ready) and time.time() - t < 15:
-            Gtk.main_iteration_do(False)
 
+        if not (fos_tab.ready and ios_tab.ready) and time.time() - t < 15:
+            wait(5)
         print "==== %s ====" % link
         take_screenshots(ios_tab, fos_tab)
         check = "PASS" if check_source_is_similar(ios_tab, fos_tab) else "FAIL"
         print "Source Compatibility:", check
         check = "PASS" if have_equal_redirects(ios_tab, fos_tab) else "FAIL"
         print "Redirects Compatibility:", check
+        check = "PASS" if same_styles(ios_tab, fos_tab) else "FAIL"
+        print "Styles Compatibility:", check
 
         ios_tab.close()
         fos_tab.close()
