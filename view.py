@@ -1,11 +1,13 @@
 import cairo
 import os
+import json
 import sys
 import time
 
 from gi.repository import GLib
 from gi.repository import Gtk
 from gi.repository import WebKit
+from gi.repository import Soup
 
 from abpy import Filter
 from utils import IOS_UA, FOS_UA, SIMPLFY_SCRIPT
@@ -19,7 +21,7 @@ if not os.path.exists('screenshots'):
 
 class View(WebKit.WebView):
 
-    def __init__(self, uri, tab_type="ios"):
+    def __init__(self, uri, tab_type="ios", port=None):
         WebKit.WebView.__init__(self)
         self.window = window = Gtk.Window()
         window.set_size_request(540, 960)
@@ -29,6 +31,7 @@ class View(WebKit.WebView):
         scrolled_window.add(self)
         window.show_all()
         self._start_time = time.time()
+        self._port = port
 
         self._filter = adblock
         self._uri = uri
@@ -89,19 +92,36 @@ class View(WebKit.WebView):
                                  self._subframes)
         return set([self.get_main_frame()] + self._subframes)
 
+
+    def send_results(self):
+        results = {"type": self._tab_type,
+                   "css": self.style_sheets,
+                   "redirects": self._redirects,
+                   "src": self.source}
+        json_body = json.dumps(results)
+
+        temp_session = Soup.SessionAsync()
+        msg = Soup.Message.new("POST",
+                               "http://127.0.0.1:%i/report" % self._port)
+
+        msg.set_request('application/json',
+                        Soup.MemoryUse.COPY,
+                        json_body, len(json_body))
+        temp_session.send_message(msg)
+
+
     def _tear_down(self):
-        print self.ready, self.get_load_status(), self._resources
         if self.ready or time.time() - self._start_time >= 15:
-            self.take_screenshot()
+            #self.take_screenshot()
             self.simplfy()
             src = self.source
             css = self.style_sheets
             print "redirects", len(self._redirects)
             print "css", len(css)
             print len(src)
-            for resource in self._resources:
-                print resource.get_uri()
             print "----"
+            if self._port:
+                self.send_results()
             mainloop.quit()
             return False
         return True
@@ -186,6 +206,7 @@ class View(WebKit.WebView):
 if __name__ == "__main__":
     uri = sys.argv[1]
     ua = sys.argv[2]
+    port = int(sys.argv[3]) if len(sys.argv[3]) > 3 else None
     mainloop = GLib.MainLoop()
-    root_view = View(uri, ua)
+    root_view = View(uri, ua, port)
     mainloop.run()
