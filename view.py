@@ -117,6 +117,8 @@ class View(WebKit.WebView):
             src = self.source
             css = self.style_sheets
             print "redirects", len(self._redirects)
+            for redirect in self._redirects:
+                print redirect
             print "css", len(css)
             print len(src)
             print "----"
