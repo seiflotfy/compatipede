@@ -27,7 +27,6 @@ class View(WebKit.WebView):
         window.set_size_request(540, 960)
         scrolled_window = Gtk.ScrolledWindow()
         window.add(scrolled_window)
-        #window.add(self)
         scrolled_window.add(self)
         window.show_all()
         self._start_time = time.time()
@@ -39,8 +38,6 @@ class View(WebKit.WebView):
 
         self._tab_type = tab_type
         self._resources = set([])
-        self._doms = []
-        self._subframes = []
         self._css = {}
         self._settings = self.get_settings()
         self._redirects = []
@@ -54,7 +51,6 @@ class View(WebKit.WebView):
                      self._on_resource_response_received)
         self.connect('resource-load-failed',
                      self._on_resource_load_failed)
-        self.connect('frame-created', self._on_frame_created)
 
         self.set_user_agent(self._user_agent)
         self.load_uri("http://%s" % uri)
@@ -83,15 +79,10 @@ class View(WebKit.WebView):
             and len(self._resources) == 0
 
     @property
-    def doms(self):
-        return [frame.get_dom_document() for frame in self.frames]
-
-    @property
     def frames(self):
         self._subframes = filter(lambda f: f.get_parent() is not None,
                                  self._subframes)
         return set([self.get_main_frame()] + self._subframes)
-
 
     def send_results(self):
         results = {"type": self._tab_type,
@@ -109,77 +100,40 @@ class View(WebKit.WebView):
                         json_body, len(json_body))
         temp_session.send_message(msg)
 
-
     def _tear_down(self):
         if self.ready or time.time() - self._start_time >= 15:
-            #self.take_screenshot()
+            self.take_screenshot()
             self.simplfy()
             src = self.source
             css = self.style_sheets
-            print "redirects", len(self._redirects)
-            print "css", len(css)
-            print len(src)
-            print "----"
+            print "redirects %i\ncss %i\nsrc %i\n----" %\
+                (len(self._redirects), len(css), len(src))
             if self._port:
                 self.send_results()
             mainloop.quit()
             return False
         return True
 
-    def _on_frame_created(self, view, frame):
-        self._subframes.append(frame)
-
     def _on_resource_response_received(self, view, frame, resource, response):
-        if resource in self._resources:
-            self._resources.remove(resource)
+        self._resources.add(resource.get_uri())
 
     def _on_resource_load_failed(self, view, frame, resource, error):
-        if resource in self._resources:
-            self._resources.remove(resource)
+        self._resources.remove(resource.get_uri())
 
     def _on_resource_load_finished(self, view, frame, resource):
         if resource.get_mime_type() == "text/css":
             self._css[resource.get_uri()] = resource.get_data().str
-        if resource in self._resources:
-            self._resources.remove(resource)
+        self._resources.remove(resource.get_uri())
 
     def _on_resource_request_starting(self, view, frame, resource,
                                       request, response):
-        uri = request.get_uri()
-        if self._filter.match(uri):
+        self._resources.add(resource.get_uri())
+        if self._filter.match(request.get_uri()):
             request.set_uri("about:blank")
-            elements = self._find_element_all('[src="%s"]' % uri)
-            for element in elements:
-                element.get_style().set_property("display", "none", "high")
-        else:
-            if response:
-                msg = response.get_message()
-                if msg and msg.get_property("status-code") / 100 == 3:
-                    self._redirects.append(request.get_uri())
-
-    def _query_selector_all(self, element, dom=None):
-        doms = [dom] if dom else self.doms
-        elements = []
-        for dom in doms:
-            try:
-                res = dom.query_selector_all(element)
-                elements += [res.item(i) for i in xrange(res.get_length())]
-            except:
-                pass
-        return elements
-
-    def _find_element_in_dom(self, element, dom):
-        elements = []
-        for e in self._query_selector_all(element, dom):
-            if not e in elements:
-                elements.append(e)
-        return elements
-
-    def _find_element_all(self, element):
-        elements = set()
-        for dom in self.doms:
-            elements.update(self._find_element_in_dom(element, dom))
-        return elements
+        elif response:
+            msg = response.get_message()
+            if msg and msg.get_property("status-code") / 100 == 3:
+                self._redirects.append(request.get_uri())
 
     def close(self):
         self.window.destroy()

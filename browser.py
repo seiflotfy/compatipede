@@ -26,7 +26,7 @@ class Browser(Soup.Server):
         return tab1["redirects"] == tab2["redirects"]
 
     def _same_styles(self, tab1, tab2):
-        return tab1["css"]== tab2["css"]
+        return tab1["css"] == tab2["css"]
 
     def _analyze_results(self):
         print "==== %s ====" % self._uri
