@@ -1,9 +1,12 @@
 from gi.repository import Soup, GLib
+from pymongo import Connection
 
 import difflib
 import json
 import subprocess
 import sys
+import time
+
 
 
 class Browser(Soup.Server):
@@ -13,6 +16,8 @@ class Browser(Soup.Server):
         self.add_handler("/report", self._handle_register, None)
         self.run_async()
         self._results = {}
+        self._client = Connection()
+        self._db = self._client.mozilla.mozcompat
         subprocess.Popen(["python view.py %s ios %i" % (uri, self.get_port())],
                          shell=True)
         subprocess.Popen(["python view.py %s fos %i" % (uri, self.get_port())],
@@ -38,6 +43,11 @@ class Browser(Soup.Server):
         print "Redirects Compatibility:", check
         check = "PASS" if self._same_styles(ios, fos) else "FAIL"
         print "Styles Compatibility:", check
+        results = {"timestamp": time.time(),
+                   "ios": ios,
+                   "fos": fos,
+                   "uri": self._uri}
+        self._db.insert(results)
 
     def _handle_register(self, server, msg, path, query, client, data):
         res = json.loads(msg.request_body.data)
