@@ -303,7 +303,8 @@ def find_css_problems(sheets):
                                 has_equivalents = True
                         if has_equivalents:
                             continue
-                        issues.append( declaration.name+' used without equivalents in '+sheet+':'+str(declaration.line)+':'+str(declaration.column)+', value: '+declaration.value.as_css() )
+                        else:
+                            issues.append( declaration.name+' used without equivalents in '+sheet+':'+str(declaration.line)+':'+str(declaration.column)+', value: '+declaration.value.as_css() )
     if len(issues):
         print "\n".join(issues)
     return issues
