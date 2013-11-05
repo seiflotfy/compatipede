@@ -248,8 +248,6 @@ def have_equal_redirects(tab1, tab2):
 
 
 def same_styles(tab1, tab2):
-    print tab1.style_sheets.keys()
-    print tab2.style_sheets.keys()
     return tab1.style_sheets == tab2.style_sheets
 
 
