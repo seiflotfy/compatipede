@@ -1,0 +1,5 @@
+http://www.hallvord.com/temp/moz/compatTesterTesting/contenttest.html
+http://www.hallvord.com/temp/moz/compatTesterTesting/csstest3.html
+http://hallvord.com/temp/moz/compatTesterTesting/redirtest.php
+http://www.hallvord.com/temp/moz/compatTesterTesting/csstest.html
+http://www.hallvord.com/temp/moz/compatTesterTesting/csstest2.html

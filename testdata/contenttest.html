@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head><title>Content test</title></head>
+<body>
+<script>
+    if(navigator.userAgent.indexOf('Firefox')>-1){
+        for(var i=0; i<50; i++)document.write('<p>This is Firefox content '+navigator.userAgent+'</p>');
+    }else{
+        document.write('<link href="style2.css?" rel="stylesheet" type="text/css">')
+        for(var i=0; i<50; i++)document.write('<div>This is non-Firefox content '+navigator.userAgent+'</div>');
+    }
+    //alert(navigator.userAgent+' '+navigator.vendor)
+</script>
+</body>
+</html>

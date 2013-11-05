@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head><title>CSS compat report test</title>
+<style>
+/* .test, does have equivalent -webkit- and -moz- styles, but lacks unprefixed. We may want to warn about that.. */
+.test{
+    -webkit-animation: foo;
+    -moz-animation: foo;
+}
+/* This definitely needs a warning... */
+.test2{
+    -webkit-transform: rotate(45deg);
+}
+/* We do NOT want this reported. We don't care about prefixed stuff if there are equivalent non-prefixed properties.
+(Checking only the presence of such properties and not checking the value matches is probably enough)
+*/
+.test3{
+    -webkit-transform:  rotate(45deg);
+     transform: rotate(45deg);
+}
+</style>
+</head>
+<body class="test">
+<p class="test2">This is filler text</p>
+<p class="test3">This is filler text</p>
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+html{
+        -webkit-transform: rotate(360deg)
+}
+body{
+    display: -webkit-box;
+    -webkit-box-pack: center;
+}
