@@ -256,7 +256,6 @@ def same_styles(tab1, tab2):
 def analyze(links):
     while len(links):
         link = links.pop()
-        link = "twitter.com"
         fos_tab = Tab(link, FOS_UA, "fos")
         ios_tab = Tab(link, IOS_UA, "ios")
         t = time.time()
@@ -275,19 +274,6 @@ def analyze(links):
         ios_tab.close()
         fos_tab.close()
         time.sleep(1)
-
-        #TODO:
-        #style_sheets = root_tab.get_dom_document().get_style_sheets()
-        #styles = [style_sheets.item(i) for i in xrange(style_sheets.get_length())]
-        #for style in styles:
-        #    print style
-        #    rules = style.get_rules()
-        #    print rules, style.get_href(), style.get_property("css-rules")
-        #    if not rules:
-        #        continue
-        #    rules = [rules.item(i) for i in xrange(rules.get_length())]
-        #     print rules
-
 
 if __name__ == "__main__":
     mainloop = GLib.MainLoop()
