@@ -4,6 +4,7 @@ import os
 import time
 import sys
 import urlparse
+import tinycss
 
 from gi.repository import GLib
 from gi.repository import Gtk
@@ -248,8 +249,29 @@ def have_equal_redirects(tab1, tab2):
 
 
 def same_styles(tab1, tab2):
-    return tab1.style_sheets == tab2.style_sheets
+    problems = find_css_problems(tab1.style_sheets)
+    return tab1.style_sheets == tab2.style_sheets and len(problems) is 0
 
+def find_css_problems(sheets):
+    issues = []
+    parser = tinycss.make_parser()
+    for sheet in sheets:
+        parsed_sheet = parser.parse_stylesheet_bytes(sheets[sheet])
+        for rule in parsed_sheet.rules:
+            if rule.at_keyword is None:
+                for declaration in rule.declarations:
+                    if '-webkit-' in declaration.name: #we need to check if there is an unprefixed equivalent among the other declarations in this rule..
+                        property_name = declaration.name[8:] # remove -webkit- prefix
+                        has_equivalents = False
+                        for subtest_declaration in rule.declarations:
+                            if subtest_declaration.name is property_name or subtest_declaration.name is '-moz-'+property_name:
+                                has_equivalents = True
+                        if has_equivalents:
+                            continue
+                        issues.append( declaration.name+' used without equivalents in '+sheet+':'+str(declaration.line)+':'+str(declaration.column)+', value: '+declaration.value.as_css() )
+    if len(issues):
+        print "\n".join(issues)
+    return issues
 
 def analyze(links):
     while len(links):
