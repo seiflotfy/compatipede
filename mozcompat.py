@@ -3,6 +3,7 @@ import difflib
 import os
 import time
 import sys
+import re
 import urlparse
 import tinycss
 
@@ -90,6 +91,8 @@ class Tab(WebKit.WebView):
         window.show_all()
 
         self._filter = adblock
+        if not re.match('^https?://', uri) :
+            uri = "http://%s" % uri
         self._uri = uri
         self._user_agent = user_agent
         self._tab_type = tab_type
