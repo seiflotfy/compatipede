@@ -234,7 +234,7 @@ class Tab(WebKit.WebView):
 def check_source_is_similar(tab1, tab2):
     tab1.simplfy()
     tab2.simplfy()
-    diff = difflib.SequenceMatcher(None, tab1.source, tab2.source).ratio
+    diff = difflib.SequenceMatcher(None, tab1.source, tab2.source).ratio()
     return diff >= 0.9
 
 
