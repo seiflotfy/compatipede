@@ -111,6 +111,9 @@ class Tab(WebKit.WebView):
 
     @property
     def style_sheets(self):
+        inline_styles = self.document.get_elements_by_tag_name("style")
+        for i in xrange(inline_styles.get_length()) :
+            self._css[self._uri+'#inline_style'+str(i)] = inline_styles.item(i).get_text_content()
         return self._css
 
     @property
