@@ -3,6 +3,7 @@ import difflib
 import os
 import time
 import sys
+import urlparse
 
 from gi.repository import GLib
 from gi.repository import Gtk
@@ -77,7 +78,7 @@ class Tab(WebKit.WebView):
                      self._on_resource_load_finished)
 
         self.set_user_agent(user_agent)
-        self.load_uri("http://%s" % uri)
+        self.load_uri(uri)
         self.set_title("%s %s" % (tab_type, uri))
 
     @property
@@ -220,7 +221,8 @@ class Tab(WebKit.WebView):
         return list((htmls))
 
     def take_screenshot(self, width=-1, height=-1):
-        path = "./screenshots/%s--%s" % (self._uri, self._tab_type)
+        hostname = urlparse.urlparse(self._uri)[1]
+        path = "./screenshots/%s--%s" % (hostname, self._tab_type)
         dview = self.get_dom_document().get_default_view()
         width = dview.get_inner_width() if width == -1 else width
         height = dview.get_outer_height() if height == -1 else height
