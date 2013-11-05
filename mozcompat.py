@@ -264,9 +264,9 @@ def analyze(links):
             wait(5)
         print "==== %s ====" % link
         take_screenshots(ios_tab, fos_tab)
-        check = "PASS" if check_source_is_similar(ios_tab, fos_tab) else "FAIL"
+        check = "PASS" if check_source_is_similar(ios_tab, fos_tab) else "FAIL:\n\tSource less than 90% similar"
         print "Source Compatibility:", check
-        check = "PASS" if have_equal_redirects(ios_tab, fos_tab) else "FAIL"
+        check = "PASS" if have_equal_redirects(ios_tab, fos_tab) else "FAIL:\n\t Firefox redirected to: "+(', '.join(fos_tab.redirects))+'\n\t iPhone redirected to: '+(', '.join(ios_tab.redirects))
         print "Redirects Compatibility:", check
         check = "PASS" if same_styles(ios_tab, fos_tab) else "FAIL"
         print "Styles Compatibility:", check
