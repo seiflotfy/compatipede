@@ -1,6 +1,7 @@
 import cairo
 import os
 import json
+import re
 import sys
 import time
 
@@ -53,7 +54,9 @@ class View(WebKit.WebView):
                      self._on_resource_load_failed)
 
         self.set_user_agent(self._user_agent)
-        self.load_uri("http://%s" % uri)
+        if not re.match('^https?://', uri) :
+            uri = "http://%s" % uri
+        self.load_uri(uri)
         self.set_title("%s %s" % (tab_type, uri))
         GLib.timeout_add(1000, self._tear_down)
 

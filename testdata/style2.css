@@ -1,0 +1,7 @@
+/* there is no problematic styling here,
+however client-side sniffing is used to make sure this file is only delivered to
+one UA. This may or may not be a problem, so we should make a note of this.
+*/
+body{
+    color: black;
+}

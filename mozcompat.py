@@ -3,6 +3,9 @@ import difflib
 import os
 import time
 import sys
+import re
+import urlparse
+import tinycss
 
 from gi.repository import GLib
 from gi.repository import Gtk
@@ -18,6 +21,34 @@ if not os.path.exists('screenshots'):
 
 IOS_UA = 'Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_3_2 like Mac OS X; en-us) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8H7 Safari/6533.18.5'
 FOS_UA = 'Mozilla/5.0 (Mobile; rv:18.0) Gecko/18.0 Firefox/18.0'
+
+# Code for spoofing JS environment.
+# Note: perhaps we only need one of them - i.e. if the backend is webkit we may only need the other one?
+# TODO: this should be customized in a cleaner way, more tied to the UA string being used. We should have a range of UA strings and associated JS snippets to choose from
+IOS_SPOOF_SCRIPT = """(function(props){
+for(var name in props)
+navigator.__defineGetter__(name, (function(name){return function(){return props[name]}})(name));
+})({
+userAgent: 'Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_0 like Mac OS X; en-us) AppleWebKit/532.9 (KHTML, like Gecko) Version/4.0.5 Mobile/8A293 Safari/6531.22.7',
+appCodeName: 'Mozilla',
+appName: 'Netscape',
+appVersion: '5.0 (iPhone; CPU iPhone OS 4_0 like Mac OS X; en-us) AppleWebKit/532.9 (KHTML, like Gecko) Version/4.0.5 Mobile/8A293 Safari/6531.22.7',
+vendor:'Apple Computer, Inc.',
+vendorSub:'',
+platform:'iPhone'
+});"""
+FOS_SPOOF_SCRIPT = """(function(props){
+for(var name in props)
+navigator.__defineGetter__(name, (function(name){return function(){return props[name]}})(name));
+})({
+userAgent: 'Mozilla/5.0 (Mobile; rv:18.1) Gecko/18.1 Firefox/18.1',
+appCodeName: 'Mozilla',
+appName: 'Netscape',
+appVersion: '5.0 (X11)',
+vendor:'',
+vendorSub:'',
+platform:'Linux i686'
+});"""
 
 SIMPLFY_SCRIPT = """
 function removeAttr(attr){
@@ -60,6 +91,8 @@ class Tab(WebKit.WebView):
         window.show_all()
 
         self._filter = adblock
+        if not re.match('^https?://', uri) :
+            uri = "http://%s" % uri
         self._uri = uri
         self._user_agent = user_agent
         self._tab_type = tab_type
@@ -77,7 +110,7 @@ class Tab(WebKit.WebView):
                      self._on_resource_load_finished)
 
         self.set_user_agent(user_agent)
-        self.load_uri("http://%s" % uri)
+        self.load_uri(uri)
         self.set_title("%s %s" % (tab_type, uri))
 
     @property
@@ -109,6 +142,9 @@ class Tab(WebKit.WebView):
 
     @property
     def style_sheets(self):
+        inline_styles = self.document.get_elements_by_tag_name("style")
+        for i in xrange(inline_styles.get_length()) :
+            self._css[self._uri+'#inline_style'+str(i)] = inline_styles.item(i).get_text_content()
         return self._css
 
     @property
@@ -125,6 +161,10 @@ class Tab(WebKit.WebView):
     def _on_resource_request_starting(self, view, frame, resource,
                                       request, response):
         uri = request.get_uri()
+        if self._tab_type is 'fos':
+            self.execute_script(FOS_SPOOF_SCRIPT)
+        else:
+            self.execute_script(IOS_SPOOF_SCRIPT)
         if self._filter.match(uri):
             request.set_uri("about:blank")
             elements = self._find_element_all('[src="%s"]' % uri)
@@ -220,7 +260,8 @@ class Tab(WebKit.WebView):
         return list((htmls))
 
     def take_screenshot(self, width=-1, height=-1):
-        path = "./screenshots/%s--%s" % (self._uri, self._tab_type)
+        hostname = urlparse.urlparse(self._uri)[1]
+        path = "./screenshots/%s--%s" % (hostname, self._tab_type)
         dview = self.get_dom_document().get_default_view()
         width = dview.get_inner_width() if width == -1 else width
         height = dview.get_outer_height() if height == -1 else height
@@ -232,7 +273,7 @@ class Tab(WebKit.WebView):
 def check_source_is_similar(tab1, tab2):
     tab1.simplfy()
     tab2.simplfy()
-    diff = difflib.SequenceMatcher(None, tab1.source, tab2.source).ratio
+    diff = difflib.SequenceMatcher(None, tab1.source, tab2.source).ratio()
     return diff >= 0.9
 
 
@@ -246,15 +287,34 @@ def have_equal_redirects(tab1, tab2):
 
 
 def same_styles(tab1, tab2):
-    print tab1.style_sheets.keys()
-    print tab2.style_sheets.keys()
-    return tab1.style_sheets == tab2.style_sheets
+    problems = find_css_problems(tab1.style_sheets)
+    return tab1.style_sheets == tab2.style_sheets and len(problems) is 0
 
+def find_css_problems(sheets):
+    issues = []
+    parser = tinycss.make_parser()
+    for sheet in sheets:
+        parsed_sheet = parser.parse_stylesheet_bytes(sheets[sheet])
+        for rule in parsed_sheet.rules:
+            if rule.at_keyword is None:
+                for declaration in rule.declarations:
+                    if '-webkit-' in declaration.name: #we need to check if there is an unprefixed equivalent among the other declarations in this rule..
+                        property_name = declaration.name[8:] # remove -webkit- prefix
+                        has_equivalents = False
+                        for subtest_declaration in rule.declarations:
+                            if subtest_declaration.name is property_name or subtest_declaration.name is '-moz-'+property_name:
+                                has_equivalents = True
+                        if has_equivalents:
+                            continue
+                        else:
+                            issues.append( declaration.name+' used without equivalents in '+sheet+':'+str(declaration.line)+':'+str(declaration.column)+', value: '+declaration.value.as_css() )
+    if len(issues):
+        print "\n".join(issues)
+    return issues
 
 def analyze(links):
     while len(links):
         link = links.pop()
-        link = "twitter.com"
         fos_tab = Tab(link, FOS_UA, "fos")
         ios_tab = Tab(link, IOS_UA, "ios")
         t = time.time()
@@ -263,9 +323,9 @@ def analyze(links):
             wait(5)
         print "==== %s ====" % link
         take_screenshots(ios_tab, fos_tab)
-        check = "PASS" if check_source_is_similar(ios_tab, fos_tab) else "FAIL"
+        check = "PASS" if check_source_is_similar(ios_tab, fos_tab) else "FAIL:\n\tSource less than 90% similar"
         print "Source Compatibility:", check
-        check = "PASS" if have_equal_redirects(ios_tab, fos_tab) else "FAIL"
+        check = "PASS" if have_equal_redirects(ios_tab, fos_tab) else "FAIL:\n\t Firefox redirected to: "+(', '.join(fos_tab.redirects))+'\n\t iPhone redirected to: '+(', '.join(ios_tab.redirects))
         print "Redirects Compatibility:", check
         check = "PASS" if same_styles(ios_tab, fos_tab) else "FAIL"
         print "Styles Compatibility:", check
@@ -273,19 +333,6 @@ def analyze(links):
         ios_tab.close()
         fos_tab.close()
         time.sleep(1)
-
-        #TODO:
-        #style_sheets = root_tab.get_dom_document().get_style_sheets()
-        #styles = [style_sheets.item(i) for i in xrange(style_sheets.get_length())]
-        #for style in styles:
-        #    print style
-        #    rules = style.get_rules()
-        #    print rules, style.get_href(), style.get_property("css-rules")
-        #    if not rules:
-        #        continue
-        #    rules = [rules.item(i) for i in xrange(rules.get_length())]
-        #     print rules
-
 
 if __name__ == "__main__":
     mainloop = GLib.MainLoop()
