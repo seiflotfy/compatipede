@@ -1,4 +1,4 @@
-from gi.repository import Soup, GLib
+from gi.repository import GLib
 from dbus.mainloop.glib import DBusGMainLoop
 from pymongo import Connection
 import dbus
@@ -9,6 +9,7 @@ import subprocess
 import sys
 import time
 import os
+import tinycss
 
 
 BUS = dbus.SessionBus(mainloop=DBusGMainLoop())
@@ -33,29 +34,65 @@ class Browser(dbus.service.Object):
                          shell=True)
 
     def _check_source_is_similar(self, tab1, tab2):
-        diff = difflib.SequenceMatcher(None, tab1["src"], tab2["src"]).ratio
-        return diff >= 0.9
+        return difflib.SequenceMatcher(None, tab1["src"], tab2["src"]).ratio()
 
     def _have_equal_redirects(self, tab1, tab2):
         return tab1["redirects"] == tab2["redirects"]
 
     def _same_styles(self, tab1, tab2):
-        return tab1["css"] == tab2["css"]
+        return self._find_css_problems(tab1["css"])
+
+    def _find_css_problems(self, sheets):
+        issues = []
+        parser = tinycss.make_parser()
+        for sheet in sheets:
+            parsed_sheet = parser.parse_stylesheet_bytes(sheets[sheet])
+            for rule in parsed_sheet.rules:
+                if rule.at_keyword is None:
+                    for dec in rule.decs:
+                        # We need to check if there is an unprefixed equivalent
+                        # among the other decs in this rule..
+                        if '-webkit-' in dec.name:
+                            # remove -webkit- prefix
+                            property_name = dec.name[8:]
+                            has_equivalents = False
+                            for subtest_dec in rule.decs:
+                                if subtest_dec.name is (property_name,
+                                                        '-moz-%s' %
+                                                        property_name):
+                                    has_equivalents = True
+                            if has_equivalents:
+                                continue
+                            issues.append(dec.name +
+                                          ' used without equivalents in ' +
+                                          sheet+':'+str(dec.line) +
+                                          ':' + str(dec.column) +
+                                          ', value: ' +
+                                          dec.value.as_css())
+        if len(issues):
+            print "\n".join(issues)
+        return issues
 
     def _analyze_results(self):
-        print "==== %s ====" % self._uri
         ios = self._results["ios"]
         fos = self._results["fos"]
-        check = "PASS" if self._check_source_is_similar(ios, fos) else "FAIL"
-        print "Source Compatibility:", check
-        check = "PASS" if self._have_equal_redirects(ios, fos) else "FAIL"
-        print "Redirects Compatibility:", check
-        check = "PASS" if self._same_styles(ios, fos) else "FAIL"
-        print "Styles Compatibility:", check
-        results = {"timestamp": time.time(),
-                   "ios": ios,
-                   "fos": fos,
-                   "uri": self._uri}
+        src_diff = self._check_source_is_similar(ios, fos)
+        style_issues = self._same_styles(ios, fos)
+        results = {
+            "timestamp": time.time(),
+            "issues": {
+                "style": style_issues,
+                "src": src_diff,
+                "redirects": {
+                    "ios": ios["redirects"],
+                    "fos": fos["redirects"]
+                }
+            },
+            "uri": self._uri,
+            "pass": src_diff >= 0.9 and
+            not style_issues and ios["redirects"] == fos["redirects"]
+        }
+        print results
         self._db.insert(results)
         mainloop.quit()
 

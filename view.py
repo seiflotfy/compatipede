@@ -9,11 +9,11 @@ import dbus
 from gi.repository import GLib
 from gi.repository import Gtk
 from gi.repository import WebKit
-from gi.repository import Soup
 from dbus.mainloop.glib import DBusGMainLoop
 
 from abpy import Filter
-from utils import IOS_UA, FOS_UA, SIMPLFY_SCRIPT
+from utils import IOS_UA, FOS_UA
+from utils import SIMPLFY_SCRIPT, IOS_SPOOF_SCRIPT, FOS_SPOOF_SCRIPT
 
 BUS = dbus.SessionBus(mainloop=DBusGMainLoop())
 BROWSER_BUS_NAME = 'org.mozilla.mozcompat.browser%i'
@@ -107,10 +107,6 @@ class Tab(WebKit.WebView):
         if self.ready or time.time() - self._start_time >= 15:
             self.take_screenshot()
             self.simplfy()
-            src = self.source
-            css = self.style_sheets
-            print "redirects %i\ncss %i\nsrc %i\n----" %\
-                (len(self._redirects), len(css), len(src))
             if self._port:
                 self.send_results()
             mainloop.quit()
@@ -130,6 +126,10 @@ class Tab(WebKit.WebView):
 
     def _on_resource_request_starting(self, view, frame, resource,
                                       request, response):
+        if self._tab_type is 'fos':
+            self.execute_script(FOS_SPOOF_SCRIPT)
+        else:
+            self.execute_script(IOS_SPOOF_SCRIPT)
         self._resources.add(resource.get_uri())
         if self._filter.match(request.get_uri()):
             request.set_uri("about:blank")
@@ -158,7 +158,6 @@ class Tab(WebKit.WebView):
         height = dview.get_outer_height() if height == -1 else height
         surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
         self.draw(cairo.Context(surf))
-        print "===>", path
         surf.write_to_png(path)
 
 
