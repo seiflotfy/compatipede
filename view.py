@@ -4,15 +4,21 @@ import json
 import re
 import sys
 import time
+import dbus
 
 from gi.repository import GLib
 from gi.repository import Gtk
 from gi.repository import WebKit
 from gi.repository import Soup
+from dbus.mainloop.glib import DBusGMainLoop
 
 from abpy import Filter
 from utils import IOS_UA, FOS_UA, SIMPLFY_SCRIPT
 
+BUS = dbus.SessionBus(mainloop=DBusGMainLoop())
+BROWSER_BUS_NAME = 'org.mozilla.mozcompat.browser%i'
+BROWSER_OBJ_PATH = '/org/mozilla/mozcompat'
+BROWSER_INTERFACE = 'org.mozilla.mozcompat'
 
 adblock = Filter()
 
@@ -20,7 +26,7 @@ if not os.path.exists('screenshots'):
     os.makedirs('screenshots')
 
 
-class View(WebKit.WebView):
+class Tab(WebKit.WebView):
 
     def __init__(self, uri, tab_type="ios", port=None):
         WebKit.WebView.__init__(self)
@@ -54,7 +60,7 @@ class View(WebKit.WebView):
                      self._on_resource_load_failed)
 
         self.set_user_agent(self._user_agent)
-        if not re.match('^https?://', uri) :
+        if not re.match('^https?://', uri):
             uri = "http://%s" % uri
         self.load_uri(uri)
         self.set_title("%s %s" % (tab_type, uri))
@@ -93,15 +99,9 @@ class View(WebKit.WebView):
                    "redirects": self._redirects,
                    "src": self.source}
         json_body = json.dumps(results)
-
-        temp_session = Soup.SessionAsync()
-        msg = Soup.Message.new("POST",
-                               "http://127.0.0.1:%i/report" % self._port)
-
-        msg.set_request('application/json',
-                        Soup.MemoryUse.COPY,
-                        json_body, len(json_body))
-        temp_session.send_message(msg)
+        obj = BUS.get_object(BROWSER_BUS_NAME % self._port, BROWSER_OBJ_PATH)
+        iface = dbus.Interface(obj, BROWSER_INTERFACE)
+        iface.push_result(json_body)
 
     def _tear_down(self):
         if self.ready or time.time() - self._start_time >= 15:
@@ -151,12 +151,14 @@ class View(WebKit.WebView):
         self._settings.set_property('user-agent', user_agent)
 
     def take_screenshot(self, width=-1, height=-1):
-        path = "./screenshots/%s--%s" % (self._uri, self._tab_type)
+        path = "./screenshots/%s--%s" % (self._uri.split("//")[1],
+                                         self._tab_type)
         dview = self.get_dom_document().get_default_view()
         width = dview.get_inner_width() if width == -1 else width
         height = dview.get_outer_height() if height == -1 else height
         surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
         self.draw(cairo.Context(surf))
+        print "===>", path
         surf.write_to_png(path)
 
 
@@ -165,5 +167,5 @@ if __name__ == "__main__":
     ua = sys.argv[2]
     port = int(sys.argv[3]) if len(sys.argv[3]) > 3 else None
     mainloop = GLib.MainLoop()
-    root_view = View(uri, ua, port)
+    root_view = Tab(uri, ua, port)
     mainloop.run()

@@ -1,26 +1,35 @@
 from gi.repository import Soup, GLib
+from dbus.mainloop.glib import DBusGMainLoop
 from pymongo import Connection
-
+import dbus
+import dbus.service
 import difflib
 import json
 import subprocess
 import sys
 import time
+import os
 
 
+BUS = dbus.SessionBus(mainloop=DBusGMainLoop())
+BROWSER_BUS_NAME = 'org.mozilla.mozcompat.browser%i'
+BROWSER_OBJ_PATH = '/org/mozilla/mozcompat'
+BROWSER_INTERFACE = 'org.mozilla.mozcompat'
 
-class Browser(Soup.Server):
+
+class Browser(dbus.service.Object):
     def __init__(self, uri):
-        Soup.Server.__init__(self)
         self._uri = uri
-        self.add_handler("/report", self._handle_register, None)
-        self.run_async()
         self._results = {}
         self._client = Connection()
         self._db = self._client.mozilla.mozcompat
-        subprocess.Popen(["python view.py %s ios %i" % (uri, self.get_port())],
+        self._pid = os.getpid()
+        DBusGMainLoop(set_as_default=True)
+        bus_name = dbus.service.BusName(BROWSER_BUS_NAME % self._pid, bus=BUS)
+        dbus.service.Object.__init__(self, bus_name, BROWSER_OBJ_PATH)
+        subprocess.Popen(["python view.py %s ios %i" % (uri, self._pid)],
                          shell=True)
-        subprocess.Popen(["python view.py %s fos %i" % (uri, self.get_port())],
+        subprocess.Popen(["python view.py %s fos %i" % (uri, self._pid)],
                          shell=True)
 
     def _check_source_is_similar(self, tab1, tab2):
@@ -48,13 +57,14 @@ class Browser(Soup.Server):
                    "fos": fos,
                    "uri": self._uri}
         self._db.insert(results)
+        mainloop.quit()
 
-    def _handle_register(self, server, msg, path, query, client, data):
-        res = json.loads(msg.request_body.data)
+    @dbus.service.method(dbus_interface=BROWSER_INTERFACE, in_signature='s')
+    def push_result(self, results):
+        res = json.loads(results)
         self._results[res["type"]] = res
         if len(self._results) == 2:
-            self._analyze_results()
-            mainloop.quit()
+            GLib.idle_add(self._analyze_results)
 
 
 if __name__ == "__main__":
