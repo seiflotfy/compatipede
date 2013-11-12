@@ -57,7 +57,7 @@ class Browser(dbus.service.Object):
                             property_name = dec.name[8:]
                             has_equivalents = False
                             for subtest_dec in rule.decs:
-                                if subtest_dec.name is (property_name,
+                                if subtest_dec.name in (property_name,
                                                         '-moz-%s' %
                                                         property_name):
                                     has_equivalents = True
