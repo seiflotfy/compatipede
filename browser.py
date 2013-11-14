@@ -49,14 +49,14 @@ class Browser(dbus.service.Object):
             parsed_sheet = parser.parse_stylesheet_bytes(sheets[sheet])
             for rule in parsed_sheet.rules:
                 if rule.at_keyword is None:
-                    for dec in rule.decs:
+                    for dec in rule.declarations:
                         # We need to check if there is an unprefixed equivalent
-                        # among the other decs in this rule..
+                        # among the other declarations in this rule..
                         if '-webkit-' in dec.name:
                             # remove -webkit- prefix
                             property_name = dec.name[8:]
                             has_equivalents = False
-                            for subtest_dec in rule.decs:
+                            for subtest_dec in rule.declarations:
                                 if subtest_dec.name in (property_name,
                                                         '-moz-%s' %
                                                         property_name):
@@ -90,7 +90,7 @@ class Browser(dbus.service.Object):
             },
             "uri": self._uri,
             "pass": src_diff >= 0.9 and
-            not style_issues and ios["redirects"] == fos["redirects"]
+            not style_issues and fos["redirects"] == ios["redirects"]
         }
         print results
         self._db.insert(results)
