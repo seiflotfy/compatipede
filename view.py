@@ -135,7 +135,15 @@ class Tab(WebKit.WebView):
             request.set_uri("about:blank")
         elif response:
             msg = response.get_message()
-            if msg and msg.get_property("status-code") / 100 == 3:
+            temp_uri_list = [self._uri]
+            if self._uri.endswith("/"):
+                temp_uri_list.append(self._uri[:-1])
+            else:
+                temp_uri_list.append("%s/" % self._uri)
+
+            if msg and msg.get_property("status-code") / 100 == 3 and\
+                    any([response.get_uri() in u
+                         for u in self._redirects + temp_uri_list]):
                 self._redirects.append(request.get_uri())
 
     def close(self):
