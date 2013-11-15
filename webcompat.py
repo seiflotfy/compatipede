@@ -24,16 +24,16 @@ def callback(channel, method, properties, body):
 if len(sys.argv) == 2 and sys.argv[1] == "listen":
     while True:
         time.sleep(1)
-        channel.basic_consume(callback, queue='mozcompat', no_ack=True)
         values = [(key, value) for key, value in browsers.items()]
         for key, value in values:
             if value.poll() is not None:
                 del browsers[key]
-        if not queue or len(browsers) > 1:
+        if not queue or len(browsers) > 5:
             continue
         uri = queue.pop(0)
         if uri in browsers:
             continue
+        channel.basic_consume(callback, queue='mozcompat', no_ack=True)
         browser = subprocess.Popen(BROWSER_CMD % (uri), shell=True)
         browsers[uri] = browser
         print len(queue), len(browsers)
