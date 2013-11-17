@@ -34,9 +34,16 @@ if len(sys.argv) == 2 and sys.argv[1] == "listen":
     channel.basic_consume(callback, queue='mozcompat', no_ack=True)
     channel.start_consuming()
 
-elif len(sys.argv) == 3 and sys.argv[1] == "push":
-    channel.basic_publish(exchange='',
-                          routing_key='mozcompat', body=sys.argv[2])
+elif len(sys.argv) == 3:
+    if sys.argv[1] == "push":
+        channel.basic_publish(exchange='', routing_key='mozcompat',
+                              body=sys.argv[2])
+    elif sys.argv[1] == "pushall":
+        f = open(sys.argv[2], "r")
+        sites = f.readlines()
+        for site in sites:
+            channel.basic_publish(exchange='', routing_key='mozcompat',
+                                  body=site)
 
 else:
     print "WRONG BLA BLA"

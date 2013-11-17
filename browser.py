@@ -40,13 +40,16 @@ class Browser(dbus.service.Object):
         return tab1["redirects"] == tab2["redirects"]
 
     def _same_styles(self, tab1, tab2):
-        return self._find_css_problems(tab1["css"])
+        try:
+            return self._find_css_problems(tab1["css"])
+        except:
+            return ["ERROR PARSING CSS"]
 
     def _find_css_problems(self, sheets):
         issues = []
         parser = tinycss.make_parser()
         for sheet in sheets:
-            parsed_sheet = parser.parse_stylesheet_bytes(sheets[sheet])
+            parsed_sheet = parser.parse_stylesheet_bytes(unicode(sheets[sheet]))
             for rule in parsed_sheet.rules:
                 if rule.at_keyword is None:
                     for dec in rule.declarations:
@@ -69,8 +72,6 @@ class Browser(dbus.service.Object):
                                           ':' + str(dec.column) +
                                           ', value: ' +
                                           dec.value.as_css())
-        if len(issues):
-            print "\n".join(issues)
         return issues
 
     def _analyze_results(self):
@@ -92,7 +93,13 @@ class Browser(dbus.service.Object):
             "pass": src_diff >= 0.9 and
             not style_issues and fos["redirects"] == ios["redirects"]
         }
-        print results
+
+        print "\n=========\n%s\n=========" % self._uri
+        print json.dumps(results, sort_keys=True,
+                         indent=4, separators=(',', ': '))
+        print "========="
+        print "PASS:", results["pass"]
+        print "=========\n"
         self._db.insert(results)
         mainloop.quit()
 

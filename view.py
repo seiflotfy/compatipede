@@ -105,7 +105,7 @@ class Tab(WebKit.WebView):
 
     def _tear_down(self):
         if self.ready or time.time() - self._start_time >= 15:
-            self.take_screenshot()
+            #self.take_screenshot()
             self.simplfy()
             if self._port:
                 self.send_results()
@@ -161,6 +161,7 @@ class Tab(WebKit.WebView):
     def take_screenshot(self, width=-1, height=-1):
         path = "./screenshots/%s--%s" % (self._uri.split("//")[1],
                                          self._tab_type)
+        print path
         dview = self.get_dom_document().get_default_view()
         width = dview.get_inner_width() if width == -1 else width
         height = dview.get_outer_height() if height == -1 else height
