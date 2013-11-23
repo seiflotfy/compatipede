@@ -123,11 +123,13 @@ class Tab(WebKit.WebView):
         if resource.get_mime_type() == "text/css":
             self._css[resource.get_uri()] = resource.get_data().str
         self._resources.remove(resource.get_uri())
-        if len(self._redirects) == 0 and not is_host_and_path_same(self.get_main_frame().get_uri(),  self._uri):
-            # there is something fishy in the state of our redirect tracking.. JS navigation, probably..
+        current_uri = self.get_main_frame().get_uri()
+        if not is_host_and_path_same(current_uri,  self._uri):
+            # If this redirect isn't already recorded, there is something fishy in the state of our redirect tracking..
+            # JS navigation, probably..
             temp_uri_list = self._get_ignore_redirects_list()
-            if self.get_main_frame().get_uri() not in temp_uri_list:
-                self._redirects.append(self.get_main_frame().get_uri())
+            if current_uri not in temp_uri_list and current_uri not in self._redirects:
+                self._redirects.append(current_uri)
 
 
     def _on_resource_request_starting(self, view, frame, resource,
