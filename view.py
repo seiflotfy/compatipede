@@ -13,7 +13,7 @@ from dbus.mainloop.glib import DBusGMainLoop
 
 from abpy import Filter
 from utils import IOS_UA, FOS_UA
-from utils import SIMPLFY_SCRIPT, IOS_SPOOF_SCRIPT, FOS_SPOOF_SCRIPT
+from utils import SIMPLFY_SCRIPT, IOS_SPOOF_SCRIPT, FOS_SPOOF_SCRIPT, is_host_and_path_same
 
 BUS = dbus.SessionBus(mainloop=DBusGMainLoop())
 BROWSER_BUS_NAME = 'org.mozilla.mozcompat.browser%i'
@@ -123,6 +123,12 @@ class Tab(WebKit.WebView):
         if resource.get_mime_type() == "text/css":
             self._css[resource.get_uri()] = resource.get_data().str
         self._resources.remove(resource.get_uri())
+        if len(self._redirects) == 0 and not is_host_and_path_same(self.get_main_frame().get_uri(),  self._uri):
+            # there is something fishy in the state of our redirect tracking.. JS navigation, probably..
+            temp_uri_list = self._get_ignore_redirects_list()
+            if self.get_main_frame().get_uri() not in temp_uri_list:
+                self._redirects.append(self.get_main_frame().get_uri())
+
 
     def _on_resource_request_starting(self, view, frame, resource,
                                       request, response):
@@ -135,16 +141,19 @@ class Tab(WebKit.WebView):
             request.set_uri("about:blank")
         elif response:
             msg = response.get_message()
-            temp_uri_list = [self._uri]
-            if self._uri.endswith("/"):
-                temp_uri_list.append(self._uri[:-1])
-            else:
-                temp_uri_list.append("%s/" % self._uri)
-
+            temp_uri_list = self._get_ignore_redirects_list()
             if msg and msg.get_property("status-code") / 100 == 3 and\
                     any([response.get_uri() in u
                          for u in self._redirects + temp_uri_list]):
                 self._redirects.append(request.get_uri())
+
+    def _get_ignore_redirects_list(self):
+        temp_uri_list = [self._uri]
+        if self._uri.endswith("/"):
+            temp_uri_list.append(self._uri[:-1])
+        else:
+            temp_uri_list.append("%s/" % self._uri)
+        return temp_uri_list
 
     def close(self):
         self.window.destroy()
