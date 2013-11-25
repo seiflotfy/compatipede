@@ -48,8 +48,8 @@ class Browser(dbus.service.Object):
     def _find_css_problems(self, sheets):
         issues = []
         parser = tinycss.make_parser()
-        for sheet in sheets:
-            parsed_sheet = parser.parse_stylesheet_bytes(unicode(sheets[sheet]))
+        for key, value in sheets.iteritems():
+            parsed_sheet = parser.parse_stylesheet_bytes(unicode(value))
             for rule in parsed_sheet.rules:
                 if rule.at_keyword is None:
                     for dec in rule.declarations:
@@ -68,7 +68,7 @@ class Browser(dbus.service.Object):
                                 continue
                             issues.append(dec.name +
                                           ' used without equivalents in ' +
-                                          sheet+':'+str(dec.line) +
+                                          key+':'+str(dec.line) +
                                           ':' + str(dec.column) +
                                           ', value: ' +
                                           dec.value.as_css())
