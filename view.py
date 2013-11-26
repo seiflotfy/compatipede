@@ -52,6 +52,7 @@ class Tab(WebKit.WebView):
         self._css = {}
         self._settings = self.get_settings()
         self._redirects = []
+        self._js_injected_frames = {}
         self._settings.set_property("enable-private-browsing", True)
 
         self.connect('resource-request-starting',
@@ -140,12 +141,14 @@ class Tab(WebKit.WebView):
 
             # at this point, a HTML page is being delivered but its JS has not run yet
             # This seems like a good place to do spoofing and injectionTime:start plugins
-            if self._tab_type is 'fos':
-                self.execute_script(FOS_SPOOF_SCRIPT)
-            else:
-                self.execute_script(IOS_SPOOF_SCRIPT)
-            # This is also a good place to inject JS for any 'start' plug-ins
-            filter_and_inject_plugins(self, frame.get_uri(), 'start')
+            if not frame in self._js_injected_frames:
+                if self._tab_type is 'fos':
+                    self.execute_script(FOS_SPOOF_SCRIPT)
+                else:
+                    self.execute_script(IOS_SPOOF_SCRIPT)
+                # This is also a good place to inject JS for any 'start' plug-ins
+                filter_and_inject_plugins(self, frame.get_uri(), 'start')
+                self._js_injected_frames[frame] = True
 
     def _on_resource_load_failed(self, view, frame, resource, error):
         self._resources.remove(resource.get_uri())
