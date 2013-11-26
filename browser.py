@@ -77,8 +77,8 @@ class Browser(dbus.service.Object):
     def _analyze_results(self):
         ios = self._results["ios"]
         fos = self._results["fos"]
-        src_diff = self._check_source_is_similar(ios, fos)
-        style_issues = self._same_styles(ios, fos)
+        src_diff = self._check_source_is_similar(fos, ios)
+        style_issues = self._same_styles(fos, ios)
         plugin_results = {"ios": ios["plugin_results"],
                     "fos": fos["plugin_results"]}
         results = {

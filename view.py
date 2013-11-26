@@ -63,14 +63,9 @@ class Tab(WebKit.WebView):
                      self._on_resource_load_finished)
         self.connect('resource-response-received',
                      self._on_resource_response_received)
-        self.connect('resource-load-failed',
-                     self._on_resource_load_failed)
-        self.connect('resource-content-length-received',
-                     self._on_resource_content_length_received)
-        self.connect('onload_event',
-                     self._on_onload_event)
-        self.connect('console_message',
-                     self._on_console_message)
+        self.connect("notify::load-status", self._on_notify_load_status)
+        self.connect('onload_event', self._on_onload_event)
+        self.connect('console_message', self._on_console_message)
 
         self.set_user_agent(self._user_agent)
         self.load_uri(uri)
@@ -94,11 +89,6 @@ class Tab(WebKit.WebView):
         return self._redirects
 
     @property
-    def ready(self):
-        return self.get_load_status() == WebKit.LoadStatus.FINISHED\
-            and len(self._resources) == 0
-
-    @property
     def frames(self):
         self._subframes = filter(lambda f: f.get_parent() is not None,
                                  self._subframes)
@@ -116,27 +106,27 @@ class Tab(WebKit.WebView):
         iface.push_result(json_body)
 
     def _tear_down(self):
-        if self.ready or time.time() - self._start_time >= 15:
-            #self.take_screenshot()
-            self.simplfy()
-            if self._port:
-                self.send_results()
+        print time.time() - self._start_time
+        if self.get_load_status() == WebKit.LoadStatus.FINISHED\
+                or time.time() - self._start_time >= 15:
+            try:
+                #self.take_screenshot()
+                self.simplfy()
+                if self._port:
+                    self.send_results()
+            except Exception, ex:
+                print ex
             mainloop.quit()
             return False
         return True
 
-    def _on_resource_response_received(self, view, frame, resource,
-                                       response):
-        self._resources.add(resource.get_uri())
-
-    def _on_resource_content_length_received(self, view, frame, resource,
-                                       length):
+    def _on_resource_response_received(self, view, frame, resource, response):
         try:
             content_type = frame.get_data_source().get_main_resource().get_mime_type()
         except:
             content_type = ''
         if content_type == 'text/html':  # and frame.get_parent() == None:
-            #Wow, here comes The Content!
+            # Wow, here comes The Content!
             # Well, at least there is a text/html response in the main window.
             # We assume that at this point, a HTML page is being delivered but its JS has not run yet
             # This seems like a good place to do spoofing and injectionTime:start plugins
@@ -149,25 +139,20 @@ class Tab(WebKit.WebView):
                 filter_and_inject_plugins(self, frame.get_uri(), 'start')
                 self._js_injected_frames[frame] = True
 
-    def _on_resource_load_failed(self, view, frame, resource, error):
-        self._resources.remove(resource.get_uri())
+    def _on_notify_load_status(self, view, status):
+        status = self.get_load_status()
 
     def _on_resource_load_finished(self, view, frame, resource):
         if resource.get_mime_type() == "text/css":
             self._css[resource.get_uri()] = resource.get_data().str
-        self._resources.remove(resource.get_uri())
 
-    def _on_resource_request_starting(self, view, frame, resource,
-                                      request, response):
-        self._resources.add(resource.get_uri())
+    def _on_resource_request_starting(self, view, frame, resource, request,
+                                      response):
         if self._filter.match(request.get_uri()):
             request.set_uri("about:blank")
         elif response:
-            msg = response.get_message()
-            temp_uri_list = self._get_ignore_redirects_list()
-            if msg and msg.get_property("status-code") / 100 == 3 and\
-                    any([response.get_uri() in u
-                         for u in self._redirects + temp_uri_list]):
+            temp_uri_list = self._get_ignore_redirects_list() + self._redirects
+            if any([response.get_uri() in u for u in temp_uri_list]):
                 self._redirects.append(request.get_uri())
 
     def _on_onload_event(self, view, frame):
@@ -177,7 +162,8 @@ class Tab(WebKit.WebView):
             # If this redirect isn't already recorded, there is something fishy in the state of our redirect tracking..
             # JS navigation, probably..
             temp_uri_list = self._get_ignore_redirects_list()
-            if current_uri not in temp_uri_list and current_uri not in self._redirects:
+            if current_uri not in temp_uri_list\
+                    and current_uri not in self._redirects:
                 self._redirects.append(current_uri)
         # Let's see if we have any plugins that want to run at onload time..
         filter_and_inject_plugins(self, frame.get_uri(), 'load')
