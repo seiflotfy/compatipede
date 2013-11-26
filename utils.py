@@ -55,10 +55,12 @@ vendorSub:'',
 platform:'Linux i686'
 });"""
 
+
 def is_host_and_path_same(url1, url2):
     parsed1 = urlparse(url1)
     parsed2 = urlparse(url2)
     return parsed1[1] == parsed2[1] and parsed1[2] == parsed2[2]
+
 
 def wait(timeout=15):
     t = time.time()

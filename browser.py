@@ -68,7 +68,7 @@ class Browser(dbus.service.Object):
                                 continue
                             issues.append(dec.name +
                                           ' used without equivalents in ' +
-                                          key+':'+str(dec.line) +
+                                          key + ':' + str(dec.line) +
                                           ':' + str(dec.column) +
                                           ', value: ' +
                                           dec.value.as_css())
@@ -79,7 +79,8 @@ class Browser(dbus.service.Object):
         fos = self._results["fos"]
         src_diff = self._check_source_is_similar(ios, fos)
         style_issues = self._same_styles(ios, fos)
-        plugin_results = {"ios":ios["plugin_results"], "fos":fos["plugin_results"] }
+        plugin_results = {"ios": ios["plugin_results"],
+                    "fos": fos["plugin_results"]}
         results = {
             "timestamp": time.time(),
             "issues": {
