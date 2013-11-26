@@ -1,0 +1,9 @@
+{
+    "name": "window-orientation-usage",
+    "javascript": "window.__defineGetter__('orientation', function(){console.log('window.orientation used')});",
+    "injectionTime": "start",
+    "dataSource": "console",
+    "dataRegexp": "window\\.orientation used",
+    "bug": "",
+    "targetSite": ""
+}

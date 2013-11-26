@@ -14,6 +14,8 @@ from dbus.mainloop.glib import DBusGMainLoop
 from abpy import Filter
 from utils import IOS_UA, FOS_UA
 from utils import SIMPLFY_SCRIPT, IOS_SPOOF_SCRIPT, FOS_SPOOF_SCRIPT, is_host_and_path_same
+from pluginshandler import load_plugins, filter_and_inject_plugins, handle_console_message, get_plugin_results
+
 
 BUS = dbus.SessionBus(mainloop=DBusGMainLoop())
 BROWSER_BUS_NAME = 'org.mozilla.mozcompat.browser%i'
@@ -40,6 +42,8 @@ class Tab(WebKit.WebView):
         self._port = port
 
         self._filter = adblock
+        if not re.match('^https?://', uri):
+            uri = "http://%s" % uri
         self._uri = uri
         self._user_agent = FOS_UA if tab_type == "fos" else IOS_UA
 
@@ -58,10 +62,15 @@ class Tab(WebKit.WebView):
                      self._on_resource_response_received)
         self.connect('resource-load-failed',
                      self._on_resource_load_failed)
+        self.connect('resource-content-length-received',
+                     self._on_resource_content_length_received)
+        self.connect('onload_event',
+                     self._on_onload_event)
+        self.connect('console_message',
+                     self._on_console_message)
+
 
         self.set_user_agent(self._user_agent)
-        if not re.match('^https?://', uri):
-            uri = "http://%s" % uri
         self.load_uri(uri)
         self.set_title("%s %s" % (tab_type, uri))
         GLib.timeout_add(1000, self._tear_down)
@@ -97,7 +106,8 @@ class Tab(WebKit.WebView):
         results = {"type": self._tab_type,
                    "css": self.style_sheets,
                    "redirects": self._redirects,
-                   "src": self.source}
+                   "src": self.source,
+                   "plugin_results": get_plugin_results()}
         json_body = json.dumps(results)
         obj = BUS.get_object(BROWSER_BUS_NAME % self._port, BROWSER_OBJ_PATH)
         iface = dbus.Interface(obj, BROWSER_INTERFACE)
@@ -116,6 +126,27 @@ class Tab(WebKit.WebView):
     def _on_resource_response_received(self, view, frame, resource, response):
         self._resources.add(resource.get_uri())
 
+    def _on_resource_content_length_received(self, view, frame, resource, length):
+        try:
+            # Unfortunately resource.get_mime_type() still returns None at this point - we can dig deeper though..
+            # possibly frame.get_data_source().get_main_resource().get_mime_type() might be an alternative?
+            content_type = frame.get_data_source().get_main_resource().get_mime_type()
+        except:
+            content_type = ''
+        if content_type =='text/html': # and frame.get_parent() == None:
+            #Wow, here comes The Content!
+            # Well, at least this is a text/html response sent to the main window.
+            # Could be a sub-resource with wrong content-type set
+
+            # at this point, a HTML page is being delivered but its JS has not run yet
+            # This seems like a good place to do spoofing and injectionTime:start plugins
+            if self._tab_type is 'fos':
+                self.execute_script(FOS_SPOOF_SCRIPT)
+            else:
+                self.execute_script(IOS_SPOOF_SCRIPT)
+            # This is also a good place to inject JS for any 'start' plug-ins
+            filter_and_inject_plugins(self, frame.get_uri(), 'start')
+
     def _on_resource_load_failed(self, view, frame, resource, error):
         self._resources.remove(resource.get_uri())
 
@@ -123,21 +154,10 @@ class Tab(WebKit.WebView):
         if resource.get_mime_type() == "text/css":
             self._css[resource.get_uri()] = resource.get_data().str
         self._resources.remove(resource.get_uri())
-        current_uri = self.get_main_frame().get_uri()
-        if not is_host_and_path_same(current_uri,  self._uri):
-            # If this redirect isn't already recorded, there is something fishy in the state of our redirect tracking..
-            # JS navigation, probably..
-            temp_uri_list = self._get_ignore_redirects_list()
-            if current_uri not in temp_uri_list and current_uri not in self._redirects:
-                self._redirects.append(current_uri)
 
 
     def _on_resource_request_starting(self, view, frame, resource,
                                       request, response):
-        if self._tab_type is 'fos':
-            self.execute_script(FOS_SPOOF_SCRIPT)
-        else:
-            self.execute_script(IOS_SPOOF_SCRIPT)
         self._resources.add(resource.get_uri())
         if self._filter.match(request.get_uri()):
             request.set_uri("about:blank")
@@ -148,6 +168,21 @@ class Tab(WebKit.WebView):
                     any([response.get_uri() in u
                          for u in self._redirects + temp_uri_list]):
                 self._redirects.append(request.get_uri())
+
+    def _on_onload_event(self, view, frame):
+        # Check if the URL in the main frame is the one we initially requested
+        current_uri = self.get_main_frame().get_uri()
+        if not is_host_and_path_same(current_uri,  self._uri):
+            # If this redirect isn't already recorded, there is something fishy in the state of our redirect tracking..
+            # JS navigation, probably..
+            temp_uri_list = self._get_ignore_redirects_list()
+            if current_uri not in temp_uri_list and current_uri not in self._redirects:
+                self._redirects.append(current_uri)
+        # Let's see if we have any plugins that want to run at onload time..
+        filter_and_inject_plugins(self, frame.get_uri(), 'load')
+
+    def _on_console_message(self, view, message, line, id):
+        handle_console_message(self, message)
 
     def _get_ignore_redirects_list(self):
         temp_uri_list = [self._uri]
@@ -180,11 +215,11 @@ class Tab(WebKit.WebView):
         self.draw(cairo.Context(surf))
         surf.write_to_png(path)
 
-
 if __name__ == "__main__":
     uri = sys.argv[1]
     ua = sys.argv[2]
     port = int(sys.argv[3]) if len(sys.argv[3]) > 3 else None
     mainloop = GLib.MainLoop()
+    load_plugins()
     root_view = Tab(uri, ua, port)
     mainloop.run()

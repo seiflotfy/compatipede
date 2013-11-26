@@ -79,6 +79,7 @@ class Browser(dbus.service.Object):
         fos = self._results["fos"]
         src_diff = self._check_source_is_similar(ios, fos)
         style_issues = self._same_styles(ios, fos)
+        plugin_results = {"ios":ios["plugin_results"], "fos":fos["plugin_results"] }
         results = {
             "timestamp": time.time(),
             "issues": {
@@ -87,7 +88,8 @@ class Browser(dbus.service.Object):
                 "redirects": {
                     "ios": ios["redirects"],
                     "fos": fos["redirects"]
-                }
+                },
+                "plugin_results": plugin_results
             },
             "uri": self._uri,
             "pass": src_diff >= 0.9 and
