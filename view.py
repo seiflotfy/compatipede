@@ -106,7 +106,6 @@ class Tab(WebKit.WebView):
         iface.push_result(json_body)
 
     def _tear_down(self):
-        print time.time() - self._start_time
         if self.get_load_status() == WebKit.LoadStatus.FINISHED\
                 or time.time() - self._start_time >= 15:
             try:

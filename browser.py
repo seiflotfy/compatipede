@@ -16,6 +16,8 @@ BUS = dbus.SessionBus(mainloop=DBusGMainLoop())
 BROWSER_BUS_NAME = 'org.mozilla.mozcompat.browser%i'
 BROWSER_OBJ_PATH = '/org/mozilla/mozcompat'
 BROWSER_INTERFACE = 'org.mozilla.mozcompat'
+BASEPATH = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
+VIEW_CMD = BASEPATH + "/xvfb-run.sh python " + BASEPATH + "/view.py %s %s %i"
 
 
 class Browser(dbus.service.Object):
@@ -28,10 +30,8 @@ class Browser(dbus.service.Object):
         DBusGMainLoop(set_as_default=True)
         bus_name = dbus.service.BusName(BROWSER_BUS_NAME % self._pid, bus=BUS)
         dbus.service.Object.__init__(self, bus_name, BROWSER_OBJ_PATH)
-        subprocess.Popen(["python view.py %s ios %i" % (uri, self._pid)],
-                         shell=True)
-        subprocess.Popen(["python view.py %s fos %i" % (uri, self._pid)],
-                         shell=True)
+        subprocess.Popen([VIEW_CMD % (uri, "ios", self._pid)], shell=True)
+        subprocess.Popen([VIEW_CMD % (uri, "fos", self._pid)], shell=True)
 
     def _check_source_is_similar(self, tab1, tab2):
         return difflib.SequenceMatcher(None, tab1["src"], tab2["src"]).ratio()

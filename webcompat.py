@@ -13,7 +13,7 @@ RWCY_PREFIX =\
 var masterBugTable ="""
 
 BASEPATH = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
-BROWSER_CMD = "/usr/bin/python " + BASEPATH + "/browser.py %s"
+BROWSER_CMD = BASEPATH + "/xvfb-run.sh python " + BASEPATH + "/browser.py %s"
 
 browsers = {}
 connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
