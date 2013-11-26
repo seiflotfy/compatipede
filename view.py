@@ -13,8 +13,10 @@ from dbus.mainloop.glib import DBusGMainLoop
 
 from abpy import Filter
 from utils import IOS_UA, FOS_UA
-from utils import SIMPLFY_SCRIPT, IOS_SPOOF_SCRIPT, FOS_SPOOF_SCRIPT, is_host_and_path_same
-from pluginshandler import load_plugins, filter_and_inject_plugins, handle_console_message, get_plugin_results
+from utils import SIMPLFY_SCRIPT, IOS_SPOOF_SCRIPT
+from utils import FOS_SPOOF_SCRIPT, is_host_and_path_same
+from pluginshandler import load_plugins, filter_and_inject_plugins
+from pluginshandler import handle_console_message, get_plugin_results
 
 
 BUS = dbus.SessionBus(mainloop=DBusGMainLoop())
@@ -70,7 +72,6 @@ class Tab(WebKit.WebView):
         self.connect('console_message',
                      self._on_console_message)
 
-
         self.set_user_agent(self._user_agent)
         self.load_uri(uri)
         self.set_title("%s %s" % (tab_type, uri))
@@ -124,22 +125,20 @@ class Tab(WebKit.WebView):
             return False
         return True
 
-    def _on_resource_response_received(self, view, frame, resource, response):
+    def _on_resource_response_received(self, view, frame, resource,
+                                       response):
         self._resources.add(resource.get_uri())
 
-    def _on_resource_content_length_received(self, view, frame, resource, length):
+    def _on_resource_content_length_received(self, view, frame, resource,
+                                       length):
         try:
-            # Unfortunately resource.get_mime_type() still returns None at this point - we can dig deeper though..
-            # possibly frame.get_data_source().get_main_resource().get_mime_type() might be an alternative?
             content_type = frame.get_data_source().get_main_resource().get_mime_type()
         except:
             content_type = ''
-        if content_type =='text/html': # and frame.get_parent() == None:
+        if content_type == 'text/html':  # and frame.get_parent() == None:
             #Wow, here comes The Content!
-            # Well, at least this is a text/html response sent to the main window.
-            # Could be a sub-resource with wrong content-type set
-
-            # at this point, a HTML page is being delivered but its JS has not run yet
+            # Well, at least there is a text/html response in the main window.
+            # We assume that at this point, a HTML page is being delivered but its JS has not run yet
             # This seems like a good place to do spoofing and injectionTime:start plugins
             if not frame in self._js_injected_frames:
                 if self._tab_type is 'fos':
@@ -157,7 +156,6 @@ class Tab(WebKit.WebView):
         if resource.get_mime_type() == "text/css":
             self._css[resource.get_uri()] = resource.get_data().str
         self._resources.remove(resource.get_uri())
-
 
     def _on_resource_request_starting(self, view, frame, resource,
                                       request, response):
