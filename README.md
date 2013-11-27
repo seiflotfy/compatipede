@@ -1,6 +1,23 @@
 mozcompat
 =========
 
+Mozcompat is a website compatability check framework/infrastructure
+
+The General idea is to have several webcompat processes running listening to
+a RabbitMQ service, from which they are fed with URLs.
+
+A URL is then opened once using the Firefox UserAgent and another time using the
+WebKit UserAgent and checked for compatibility:
+- Equal redirects
+- CSS style compatability
+- Source code compatability
+- Other custom tests
+
+Resuls of each run are written to a MongoDB
+
+
+How to setup
+============
 Automating Compatibility
 
 For now this only runs on Linux machines.
@@ -26,7 +43,9 @@ pymongo
 
 They can all be installed with pip
 
-To run it:
+
+How to run it:
+==============
 
 python webcompat.py listen
 
