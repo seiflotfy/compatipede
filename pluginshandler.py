@@ -21,6 +21,8 @@ def load_plugins():
 
 
 def filter_and_inject_plugins(tab, uri, timing):
+    if not uri:
+        return
     url = urlparse(uri)
     for name in all_plugins:
         plugin = all_plugins[name]
