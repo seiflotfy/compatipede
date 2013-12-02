@@ -24,6 +24,7 @@ channel.basic_qos(prefetch_count=1)
 i = 0
 
 def callback(channel, method, properties, body):
+    global i
     i += 1
     print "RECEIVED", i, body
     if not body in browsers:
