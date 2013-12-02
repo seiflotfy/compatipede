@@ -19,10 +19,13 @@ browsers = {}
 connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
 channel = connection.channel()
 channel.queue_declare(queue='mozcompat')
-channel.basic_qos(prefetch_count=1)
+#channel.basic_qos(prefetch_count=1)
 
+i = 0
 
 def callback(channel, method, properties, body):
+    i += 1
+    print "RECEIVED", i, body
     if not body in browsers:
         browsers[body] = subprocess.Popen(BROWSER_CMD % (body), shell=True)
     while not is_clean():
