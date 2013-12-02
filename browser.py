@@ -17,7 +17,7 @@ BROWSER_BUS_NAME = 'org.mozilla.mozcompat.browser%i'
 BROWSER_OBJ_PATH = '/org/mozilla/mozcompat'
 BROWSER_INTERFACE = 'org.mozilla.mozcompat'
 BASEPATH = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
-VIEW_CMD = BASEPATH + "/xvfb-run.sh python " + BASEPATH + "/view.py %s %s %i"
+VIEW_CMD = "python " + BASEPATH + "/view.py %s %s %i"
 
 
 class Browser(dbus.service.Object):
