@@ -170,7 +170,7 @@ RETVAL=$?
 set -e
 
 # Kill Xvfb now that the command has exited.
-kill $XVFBPID
+# kill $XVFBPID
 
 # Clean up.
 XAUTHORITY=$AUTHFILE xauth remove ":$SERVERNUM" >"$ERRORFILE" 2>&1
