@@ -70,6 +70,7 @@ class Tab(WebKit.WebView):
         self.set_user_agent(self._user_agent)
         self.load_uri(uri)
         self.set_title("%s %s" % (tab_type, uri))
+        self._time = time.time()
         GLib.timeout_add(1000, self._tear_down)
 
     @property
@@ -116,6 +117,8 @@ class Tab(WebKit.WebView):
             except Exception, ex:
                 print ex
             mainloop.quit()
+            print "==================>", self.get_load_status(),\
+                self._uri, time.time() - self._time
             return False
         return True
 
