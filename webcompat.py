@@ -29,9 +29,8 @@ def callback(channel, method, properties, body):
     print "RECEIVED", i, body
     if not body in browsers:
         browsers[body] = subprocess.Popen(BROWSER_CMD % (body), shell=True)
-        time.sleep(1)
     while not is_clean():
-        time.sleep(1)
+        time.sleep(3)
 
 
 def is_clean():
