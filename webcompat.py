@@ -39,7 +39,7 @@ def is_clean():
     for key, value in values:
         if value.poll() is not None:
             del browsers[key]
-    return len(browsers) < 10
+    return len(browsers) < 3
 
 
 if len(sys.argv) == 2 and sys.argv[1] == "listen":
