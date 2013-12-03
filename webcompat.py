@@ -29,7 +29,7 @@ def callback(channel, method, properties, body):
     print "RECEIVED", i, body
     if not body in browsers:
         browsers[body] = subprocess.Popen(BROWSER_CMD % (body), shell=True)
-        time.sleep(3)
+        time.sleep(1)
     while not is_clean():
         time.sleep(1)
 
@@ -39,7 +39,7 @@ def is_clean():
     for key, value in values:
         if value.poll() is not None:
             del browsers[key]
-    return len(browsers) < 3
+    return len(browsers) < 5
 
 
 if len(sys.argv) == 2 and sys.argv[1] == "listen":
