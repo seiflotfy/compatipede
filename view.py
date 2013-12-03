@@ -116,6 +116,9 @@ class Tab(WebKit.WebView):
 
     def _tear_down(self):
         if self.ready or time.time() - self._start_time >= 10:
+            t = time.time()
+            while time.time() - t < 3:
+                Gtk.main_iteration_do(False)
             try:
                 #self.take_screenshot()
                 self.simplfy()
@@ -164,7 +167,7 @@ class Tab(WebKit.WebView):
             temp_uri_list = self._get_ignore_redirects_list() + self._redirects
             if any([response.get_uri() in u for u in temp_uri_list]):
                 self._redirects.append(request.get_uri())
-        elif request.get_message().method == 'GET':
+        if not resource in self._resources:
             self._resources.append(resource)
 
     def _on_onload_event(self, view, frame):
@@ -213,6 +216,7 @@ class Tab(WebKit.WebView):
         surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
         self.draw(cairo.Context(surf))
         surf.write_to_png(path)
+
 
 if __name__ == "__main__":
     uri = sys.argv[1]

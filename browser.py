@@ -80,19 +80,13 @@ class Browser(dbus.service.Object):
         return issues
 
     def _analyze_results(self):
-        print "===> ANALYZING RESULTS"
         ios = self._results["ios"]
         fos = self._results["fos"]
-
-        print ios
-        print fos
-        print "-----"
+        print fos["css"]
+        print "---"
+        print ios["css"]
         src_diff = self._check_source_is_similar(fos, ios)
-
-        print "===> SRC DIFF DONE"
-
         style_issues = self._same_styles(fos, ios)
-        print "===> STYLE ANALYSIS DONE"
         plugin_results = {"ios": ios["plugin_results"],
                     "fos": fos["plugin_results"]}
         results = {
