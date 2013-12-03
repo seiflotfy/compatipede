@@ -10,7 +10,7 @@ BASEPATH = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
 ALEXA_FILE = BASEPATH + "/alexa.zip"
 
 
-connection = pika.BlockingConnection(pika.ConnectionParameters('192.168.0.107'))
+connection = pika.BlockingConnection(pika.ConnectionParameters('109.90.189.171'))
 channel = connection.channel()
 channel.queue_declare(queue='mozcompat')
 

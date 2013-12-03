@@ -50,7 +50,7 @@ class Tab(WebKit.WebView):
         self._user_agent = FOS_UA if tab_type == "fos" else IOS_UA
 
         self._tab_type = tab_type
-        self._resources = set([])
+        self._resources = []
         self._css = {}
         self._settings = self.get_settings()
         self._redirects = []
@@ -95,6 +95,14 @@ class Tab(WebKit.WebView):
                                  self._subframes)
         return set([self.get_main_frame()] + self._subframes)
 
+    @property
+    def ready(self):
+        wkls = WebKit.LoadStatus
+        if not self._resources and\
+                self.get_load_status() == wkls.FIRST_VISUALLY_NON_EMPTY_LAYOUT:
+            return True
+        return self.get_load_status() in (wkls.FINISHED, wkls.FAILED)
+
     def send_results(self):
         results = {"type": self._tab_type,
                    "css": self.style_sheets,
@@ -107,8 +115,7 @@ class Tab(WebKit.WebView):
         iface.push_result(json_body)
 
     def _tear_down(self):
-        if self.get_load_status() == WebKit.LoadStatus.FINISHED\
-                or time.time() - self._start_time >= 15:
+        if self.ready or time.time() - self._start_time >= 10:
             try:
                 #self.take_screenshot()
                 self.simplfy()
@@ -140,6 +147,7 @@ class Tab(WebKit.WebView):
                 # This is also a good place to inject JS for any 'start' plug-ins
                 filter_and_inject_plugins(self, frame.get_uri(), 'start')
                 self._js_injected_frames[frame] = True
+        self._resources.remove(resource)
 
     def _on_notify_load_status(self, view, status):
         status = self.get_load_status()
@@ -156,6 +164,8 @@ class Tab(WebKit.WebView):
             temp_uri_list = self._get_ignore_redirects_list() + self._redirects
             if any([response.get_uri() in u for u in temp_uri_list]):
                 self._redirects.append(request.get_uri())
+        elif request.get_message().method == 'GET':
+            self._resources.append(resource)
 
     def _on_onload_event(self, view, frame):
         # Check if the URL in the main frame is the one we initially requested
