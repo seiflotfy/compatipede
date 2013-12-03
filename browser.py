@@ -34,7 +34,12 @@ class Browser(dbus.service.Object):
         subprocess.Popen([VIEW_CMD % (uri, "fos", self._pid)], shell=True)
 
     def _check_source_is_similar(self, tab1, tab2):
-        return difflib.SequenceMatcher(None, tab1["src"], tab2["src"]).ratio()
+        print "===> DIFFING SOURCES"
+        diff = difflib.SequenceMatcher(None, tab1["src"], tab2["src"])
+        print "===> GETTING RATIO"
+        ratio = diff.quick_ratio()
+        print "===> GOT RATIO"
+        return ratio
 
     def _have_equal_redirects(self, tab1, tab2):
         return tab1["redirects"] == tab2["redirects"]
@@ -75,10 +80,19 @@ class Browser(dbus.service.Object):
         return issues
 
     def _analyze_results(self):
+        print "===> ANALYZING RESULTS"
         ios = self._results["ios"]
         fos = self._results["fos"]
+
+        print ios
+        print fos
+        print "-----"
         src_diff = self._check_source_is_similar(fos, ios)
+
+        print "===> SRC DIFF DONE"
+
         style_issues = self._same_styles(fos, ios)
+        print "===> STYLE ANALYSIS DONE"
         plugin_results = {"ios": ios["plugin_results"],
                     "fos": fos["plugin_results"]}
         results = {
@@ -110,6 +124,7 @@ class Browser(dbus.service.Object):
     def push_result(self, results):
         res = json.loads(results)
         self._results[res["type"]] = res
+        print "===>", len(self._results)
         if len(self._results) == 2:
             GLib.idle_add(self._analyze_results)
 
