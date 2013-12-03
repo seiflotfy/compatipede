@@ -63,9 +63,12 @@ class Tab(WebKit.WebView):
                      self._on_resource_load_finished)
         self.connect('resource-response-received',
                      self._on_resource_response_received)
-        self.connect("notify::load-status", self._on_notify_load_status)
+        self.connect('notify::load-status', self._on_notify_load_status)
         self.connect('onload_event', self._on_onload_event)
         self.connect('console_message', self._on_console_message)
+        self.connect('script-alert', lambda v, f, m: True)
+        self.connect('script-prompt', lambda v, f, m, d, t: True)
+        self.connect('script-confirm', lambda v, f, m, c: True)
 
         self.set_user_agent(self._user_agent)
         self.load_uri(uri)
@@ -118,7 +121,7 @@ class Tab(WebKit.WebView):
         if self.ready or time.time() - self._start_time >= 10:
             t = time.time()
             while time.time() - t < 3:
-                Gtk.main_iteration_do(False)
+                Gtk.main_iteration_do(True)
             try:
                 #self.take_screenshot()
                 self.simplfy()
