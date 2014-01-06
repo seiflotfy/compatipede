@@ -51,7 +51,7 @@ class Browser(dbus.service.Object):
         issues = []
         parser = tinycss.make_parser()
         for key, value in sheets.iteritems():
-            parsed_sheet = parser.parse_stylesheet_bytes(value)
+            parsed_sheet = parser.parse_stylesheet_bytes(value.encode('utf8'))
             for rule in parsed_sheet.rules:
                 if rule.at_keyword is None:
                     for dec in rule.declarations:
