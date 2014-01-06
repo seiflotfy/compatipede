@@ -51,7 +51,7 @@ class Browser(dbus.service.Object):
         issues = []
         parser = tinycss.make_parser()
         for key, value in sheets.iteritems():
-            parsed_sheet = parser.parse_stylesheet_bytes(unicode(value))
+            parsed_sheet = parser.parse_stylesheet_bytes(value)
             for rule in parsed_sheet.rules:
                 if rule.at_keyword is None:
                     for dec in rule.declarations:
@@ -86,7 +86,7 @@ class Browser(dbus.service.Object):
         results = {
             "timestamp": time.time(),
             "issues": {
-                "style": style_issues,
+                "style_issues": style_issues,
                 "src": src_diff,
                 "redirects": {
                     "ios": ios["redirects"],
@@ -105,10 +105,10 @@ class Browser(dbus.service.Object):
         elif "overall_status" in plugin_results["fos"]:
             results["pass"] =  plugin_results["fos"]["overall_status"]
             results["status_determined_by"] = plugin_results["fos"]["status_determinators"]
-        if src_diff >= 0.9:
+        if src_diff < 0.9:
             results["pass"] = False
-            results["status_determined_by"].append('source_diff')
-        if fos["redirects"] == ios["redirects"]:
+            results["status_determined_by"].append('src_diff')
+        if not fos["redirects"] == ios["redirects"]:
             results["pass"] = False
             results["status_determined_by"].append('redirects')
         if style_issues:
