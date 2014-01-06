@@ -41,46 +41,43 @@ class Browser(dbus.service.Object):
     def _have_equal_redirects(self, tab1, tab2):
         return tab1["redirects"] == tab2["redirects"]
 
-    def _same_styles(self, tab1, tab2):
-        try:
-            return self._find_css_problems(tab1["css"])
-        except:
-            return ["ERROR PARSING CSS"]
-
     def _find_css_problems(self, sheets):
         issues = []
-        parser = tinycss.make_parser()
-        for key, value in sheets.iteritems():
-            parsed_sheet = parser.parse_stylesheet_bytes(value.encode('utf8'))
-            for rule in parsed_sheet.rules:
-                if rule.at_keyword is None:
-                    for dec in rule.declarations:
-                        # We need to check if there is an unprefixed equivalent
-                        # among the other declarations in this rule..
-                        if '-webkit-' in dec.name:
-                            # remove -webkit- prefix
-                            property_name = dec.name[8:]
-                            has_equivalents = False
-                            for subtest_dec in rule.declarations:
-                                if subtest_dec.name in (property_name,
-                                                        '-moz-%s' %
-                                                        property_name):
-                                    has_equivalents = True
-                            if has_equivalents:
-                                continue
-                            issues.append(dec.name +
-                                          ' used without equivalents in ' +
-                                          key + ':' + str(dec.line) +
-                                          ':' + str(dec.column) +
-                                          ', value: ' +
-                                          dec.value.as_css())
+        try:
+            parser = tinycss.make_parser()
+            for key, value in sheets.iteritems():
+                parsed_sheet = parser.parse_stylesheet_bytes(value.encode('utf8'))
+                for rule in parsed_sheet.rules:
+                    if rule.at_keyword is None:
+                        for dec in rule.declarations:
+                            # We need to check if there is an unprefixed equivalent
+                            # among the other declarations in this rule..
+                            if '-webkit-' in dec.name:
+                                # remove -webkit- prefix
+                                property_name = dec.name[8:]
+                                has_equivalents = False
+                                for subtest_dec in rule.declarations:
+                                    if subtest_dec.name in (property_name,
+                                                            '-moz-%s' %
+                                                            property_name):
+                                        has_equivalents = True
+                                if has_equivalents:
+                                    continue
+                                issues.append(dec.name +
+                                              ' used without equivalents in ' +
+                                              key + ':' + str(dec.line) +
+                                              ':' + str(dec.column) +
+                                              ', value: ' +
+                                              dec.value.as_css())
+        except:
+            return ["ERROR PARSING CSS"]
         return issues
 
     def _analyze_results(self):
         ios = self._results["ios"]
         fos = self._results["fos"]
         src_diff = self._check_source_is_similar(fos, ios)
-        style_issues = self._same_styles(fos, ios)
+        style_issues = {"ios": self._find_css_problems(ios["css"]), "fos": self._find_css_problems(fos["css"]) }
         plugin_results = {"ios": ios["plugin_results"],
                     "fos": fos["plugin_results"]}
         results = {
@@ -111,7 +108,7 @@ class Browser(dbus.service.Object):
         if not fos["redirects"] == ios["redirects"]:
             results["pass"] = False
             results["status_determined_by"].append('redirects')
-        if style_issues:
+        if len(style_issues["fos"])>0:
             results["pass"] = False
             results["status_determined_by"].append('style_issues')
             
