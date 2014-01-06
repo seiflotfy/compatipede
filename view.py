@@ -5,6 +5,7 @@ import re
 import sys
 import time
 import dbus
+import chardet
 
 from gi.repository import GLib
 from gi.repository import Gtk
@@ -112,7 +113,13 @@ class Tab(WebKit.WebView):
                    "redirects": self._redirects,
                    "src": self.source,
                    "plugin_results": get_plugin_results()}
-        json_body = json.dumps(results)
+        try:
+            json_body = json.dumps(results)
+        except Exception,e:
+            print e
+            # Not sure what to do here - we could serialize an error message and pass it to the listener
+            # - if we raise an exception, will processing continue through the list of URLs?
+            raise "ERROR:json.dumps() failed in send_results, data not available"
         obj = BUS.get_object(BROWSER_BUS_NAME % self._port, BROWSER_OBJ_PATH)
         iface = dbus.Interface(obj, BROWSER_INTERFACE)
         iface.push_result(json_body)
@@ -160,7 +167,8 @@ class Tab(WebKit.WebView):
 
     def _on_resource_load_finished(self, view, frame, resource):
         if resource.get_mime_type() == "text/css":
-            self._css[resource.get_uri()] = resource.get_data().str
+            encoding = chardet.detect(resource.get_data().str)
+            self._css[resource.get_uri()] = unicode(resource.get_data().str, encoding["encoding"])
 
     def _on_resource_request_starting(self, view, frame, resource, request,
                                       response):
