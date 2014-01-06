@@ -105,13 +105,13 @@ class Browser(dbus.service.Object):
         elif "overall_status" in plugin_results["fos"]:
             results["pass"] =  plugin_results["fos"]["overall_status"]
             results["status_determined_by"] = plugin_results["fos"]["status_determinators"]
-        elif src_diff >= 0.9:
+        if src_diff >= 0.9:
             results["pass"] = False
             results["status_determined_by"].append('source_diff')
-        elif fos["redirects"] == ios["redirects"]:
+        if fos["redirects"] == ios["redirects"]:
             results["pass"] = False
             results["status_determined_by"].append('redirects')
-        elif style_issues:
+        if style_issues:
             results["pass"] = False
             results["status_determined_by"].append('style_issues')
             
