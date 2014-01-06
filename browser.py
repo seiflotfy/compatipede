@@ -98,7 +98,11 @@ class Browser(dbus.service.Object):
             "pass": src_diff >= 0.9 and
             not style_issues and fos["redirects"] == ios["redirects"]
         }
-
+        if "overall_status" in plugin_results["ios"]:
+            results["pass"] =  plugin_results["ios"]["overall_status"]
+        elif "overall_status" in plugin_results["fos"]:
+            results["pass"] =  plugin_results["fos"]["overall_status"]
+        
         print "\n=========\n%s\n=========" % self._uri
         print json.dumps(results, sort_keys=True,
                          indent=4, separators=(',', ': '))

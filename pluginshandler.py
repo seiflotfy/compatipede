@@ -57,7 +57,24 @@ def handle_console_message(tab, message):
 
 
 def get_plugin_results():
-    return plugin_result_data
+    # method returns { "pluginFoo": {"result": "foobar"}, "overall_status": True, "status_determinators": ["pluginFoo"] }
+    # The pluginFoo property will only be present if that plugin matched the content. 
+    # The "overall_status", "status_determinators" properties are optional too
+    return_obj = {}
+    # Plugin matches can optionally override overall pass/fail
+    status_determinators = []
+    status = None
+    for name in plugin_result_data :
+        return_obj[name] = {"result": plugin_result_data[name]}
+        # plugins that say "fail" will override those that say "pass" if conflicting
+        # this is handed by the "status is not False" condition here:
+        if "markMatchesAs" in all_plugins[name] and (status is not False): 
+            status = all_plugins[name]["markMatchesAs"] == 'pass' # 'True' if status should be set to Pass, 'False' otherwise
+            status_determinators.append(name) # keep track of what factors changed the status output
+    if status is not None:
+        return_obj["overall_status"] = status
+        return_obj["status_determinators"] = status_determinators
+    return return_obj
 
 
 def _make_results_obj(bug, targetSite):
