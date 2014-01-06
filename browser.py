@@ -95,14 +95,26 @@ class Browser(dbus.service.Object):
                 "plugin_results": plugin_results
             },
             "uri": self._uri,
-            "pass": src_diff >= 0.9 and
-            not style_issues and fos["redirects"] == ios["redirects"]
+            "pass": True,
+            "status_determined_by":[]
         }
+        # Now we determine an overall pass/fail status for this site, and record why
         if "overall_status" in plugin_results["ios"]:
             results["pass"] =  plugin_results["ios"]["overall_status"]
+            results["status_determined_by"] = plugin_results["ios"]["status_determinators"]
         elif "overall_status" in plugin_results["fos"]:
             results["pass"] =  plugin_results["fos"]["overall_status"]
-        
+            results["status_determined_by"] = plugin_results["fos"]["status_determinators"]
+        elif src_diff >= 0.9:
+            results["pass"] = False
+            results["status_determined_by"].append('source_diff')
+        elif fos["redirects"] == ios["redirects"]:
+            results["pass"] = False
+            results["status_determined_by"].append('redirects')
+        elif style_issues:
+            results["pass"] = False
+            results["status_determined_by"].append('style_issues')
+            
         print "\n=========\n%s\n=========" % self._uri
         print json.dumps(results, sort_keys=True,
                          indent=4, separators=(',', ': '))
