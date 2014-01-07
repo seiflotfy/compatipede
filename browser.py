@@ -48,31 +48,55 @@ class Browser(dbus.service.Object):
             for key, value in sheets.iteritems():
                 parsed_sheet = parser.parse_stylesheet_bytes(value.encode('utf8'))
                 for rule in parsed_sheet.rules:
+                    look_for_decl = []
                     if rule.at_keyword is None:
                         for dec in rule.declarations:
+                            value = dec.value.as_css()
                             # We need to check if there is an unprefixed equivalent
                             # among the other declarations in this rule..
                             if '-webkit-' in dec.name:
                                 # remove -webkit- prefix
-                                property_name = dec.name[8:]
-                                has_equivalents = False
-                                for subtest_dec in rule.declarations:
-                                    if subtest_dec.name in (property_name,
-                                                            '-moz-%s' %
-                                                            property_name):
-                                        has_equivalents = True
-                                if has_equivalents:
-                                    continue
-                                issues.append(dec.name +
-                                              ' used without equivalents in ' +
-                                              key + ':' + str(dec.line) +
-                                              ':' + str(dec.column) +
-                                              ', value: ' +
-                                              dec.value.as_css())
-        except:
+                                look_for_decl.append({"name" : dec.name[8:], "dec":dec, "sel":rule.selector.as_css()})
+                            elif '-webkit-' in value:
+                                if '-webkit-box' in value:
+                                    look_for_decl.append({"name":dec.name, "value":"flex", "dec":dec, "sel":rule.selector.as_css()})
+                                else:
+                                    look_for_decl.append({"name":dec.name, "value":value[8:], "dec":dec, "sel":rule.selector.as_css()})
+                            elif dec.name == 'display' and (value == 'box' or value == 'flexbox'): # special check for flexbox
+                                look_for_decl.append({"name":dec.name, "value":"flex", "dec":dec, "sel":rule.selector.as_css()})
+                        # having gone through all declarations in the rule, we now have a list of
+                        # "equivalent" rule names or name:value sets - so we go through the declarations
+                        # again - and check if the "equivalents" are present
+                        look_for_decl[:] = [x for x in look_for_decl if not self._found_in_rule(rule, x)] # replace list by return of list comprehension
+                        # the idea is that if all "problems" had equivalents present,
+                        # the look_for_decl list will now be empty
+                    for issue in look_for_decl:
+                        dec = issue["dec"];
+                        issues.append(dec.name +
+                                      ' used without equivalents for '+issue["sel"]+' in ' +
+                                      key + ':' + str(dec.line) +
+                                      ':' + str(dec.column) +
+                                      ', value: ' +
+                                      dec.value.as_css())
+
+        except Exception, e:
+            print e
             return ["ERROR PARSING CSS"]
         return issues
-
+        
+    def _found_in_rule(self, rule, look_for):
+        for subtest_dec in rule.declarations:
+            if 'name' in look_for and 'value' in look_for:
+                if subtest_dec.name == look_for["name"] and str(subtest_dec.value.as_css()) == look_for["value"]:
+                    return True # found!
+            elif 'value' in look_for:
+                 if look_for["value"] in subtest_dec.value.as_css():
+                    return True # found!
+            elif 'name' in look_for:
+                if subtest_dec.name == look_for["name"]:
+                    return True # found!
+        return False
+            
     def _analyze_results(self):
         ios = self._results["ios"]
         fos = self._results["fos"]
