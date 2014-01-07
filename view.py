@@ -134,6 +134,8 @@ class Tab(WebKit.WebView):
                 self.simplfy()
                 if self._port:
                     self.send_results()
+                else:
+                    raise 'No port!?'
             except Exception, ex:
                 print ex
             mainloop.quit()
