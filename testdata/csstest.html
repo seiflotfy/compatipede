@@ -3,39 +3,39 @@
 <head><title>CSS compat report test</title>
 <style>
 /* .test, does have equivalent -webkit- and -moz- styles, but lacks unprefixed. We may want to warn about that.. */
-.test{
+.reportThis1{
     -webkit-animation: foo;
     -moz-animation: foo;
 }
 /* This definitely needs a warning... */
-.test2{
+.reportThis2{
     -webkit-transform: rotate(45deg);
 }
 /* We do NOT want this reported. We don't care about prefixed stuff if there are equivalent non-prefixed properties.
 (Checking only the presence of such properties and not checking the value matches is probably enough)
 */
-.test3{
-    -webkit-transform:  rotate(45deg);
-     transform: rotate(45deg);
+.dontReportThis1{
+    -webkit-transform:  rotate(55deg);
+     transform: rotate(55deg);
 }
-.test4{
+.reportThis3{
     display: -webkit-flex;
 }
-.test5{
+.reportThis4{
     display: box;
 }
-.test6{
+.dontReportThis2{
     display: box;
     display: flex;
 }
 </style>
 </head>
-<body class="test">
-<p class="test2">This is filler text</p>
-<p class="test3">This is filler text</p>
-<p class="test4">This is filler text</p>
-<p class="test5">This is filler text</p>
-<p class="test6">This is filler text</p>
+<body class="reportThis1">
+<p class="reportThis2">This is filler text</p>
+<p class="dontReportThis1">This is filler text</p>
+<p class="reportThis3">This is filler text</p>
+<p class="reportThis4">This is filler text</p>
+<p class="dontReportThis2">This is filler text</p>
 
 </body>
 </html>
