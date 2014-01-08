@@ -49,27 +49,14 @@ class Browser(dbus.service.Object):
                 parsed_sheet = parser.parse_stylesheet_bytes(value.encode('utf8'))
                 for rule in parsed_sheet.rules:
                     look_for_decl = []
-                    if rule.at_keyword is None:
-                        for dec in rule.declarations:
-                            value = dec.value.as_css()
-                            # We need to check if there is an unprefixed equivalent
-                            # among the other declarations in this rule..
-                            if '-webkit-' in dec.name:
-                                # remove -webkit- prefix
-                                look_for_decl.append({"name" : dec.name[8:], "dec":dec, "sel":rule.selector.as_css()})
-                            elif '-webkit-' in value:
-                                if '-webkit-box' in value:
-                                    look_for_decl.append({"name":dec.name, "value":"flex", "dec":dec, "sel":rule.selector.as_css()})
-                                else:
-                                    look_for_decl.append({"name":dec.name, "value":value[8:], "dec":dec, "sel":rule.selector.as_css()})
-                            elif dec.name == 'display' and (value == 'box' or value == 'flexbox'): # special check for flexbox
-                                look_for_decl.append({"name":dec.name, "value":"flex", "dec":dec, "sel":rule.selector.as_css()})
-                        # having gone through all declarations in the rule, we now have a list of
-                        # "equivalent" rule names or name:value sets - so we go through the declarations
-                        # again - and check if the "equivalents" are present
-                        look_for_decl[:] = [x for x in look_for_decl if not self._found_in_rule(rule, x)] # replace list by return of list comprehension
-                        # the idea is that if all "problems" had equivalents present,
-                        # the look_for_decl list will now be empty
+                    # process_rule will go through rule.declarations and fill look_for_decl with a list of potential problems
+                    self._process_rule(rule, look_for_decl)
+                    # having gone through all declarations in the rule, we now have a list of
+                    # "equivalent" rule names or name:value sets - so we go through the declarations
+                    # again - and check if the "equivalents" are present
+                    look_for_decl[:] = [x for x in look_for_decl if not self._found_in_rule(rule, x)] # replace list by return of list comprehension
+                    # the idea is that if all "problems" had equivalents present,
+                    # the look_for_decl list will now be empty
                     for issue in look_for_decl:
                         dec = issue["dec"];
                         issues.append(dec.name +
@@ -83,19 +70,55 @@ class Browser(dbus.service.Object):
             print e
             return ["ERROR PARSING CSS"]
         return issues
+    
+    def _process_rule(self, rule, look_for_decl):
+            if rule.at_keyword is None or rule.at_keyword == '@page':
+                self._process_concrete_rule(rule, look_for_decl)
+            elif rule.at_keyword == '@media':
+                print rule.rules
+                for subrule in rule.rules:
+                    print 'subrule'
+                    print subrule
+                    self._process_rule(subrule, look_for_decl)
+            else:
+                print 'unknown at_keyword: "'+str(rule.at_keyword)+'"'
         
+    def _process_concrete_rule(self, rule, look_for_decl):
+        for dec in rule.declarations:
+            # We need to check if there is an unprefixed equivalent
+            # among the other declarations in this rule..
+            value = dec.value.as_css()
+            if '-webkit-' in value:
+                if '-webkit-box' in value:
+                    look_for_decl.append({"name":dec.name, "value":"flex", "dec":dec, "sel":rule.selector.as_css()})
+                else:
+                    look_for_decl.append({"name":dec.name, "value":value[8:], "dec":dec, "sel":rule.selector.as_css()})
+            elif dec.name == 'display' and (value == 'box' or value == 'flexbox'): # special check for flexbox
+                look_for_decl.append({"name":dec.name, "value":"flex", "dec":dec, "sel":rule.selector.as_css()})
+            elif '-webkit-box-flex' in dec.name:
+                look_for_decl.append({"name":"flex", "dec":dec, "sel":rule.selector.as_css()})
+            elif '-webkit-' in dec.name:
+                # remove -webkit- prefix
+                look_for_decl.append({"name" : dec.name[8:], "dec":dec, "sel":rule.selector.as_css()})
+    
     def _found_in_rule(self, rule, look_for):
-        for subtest_dec in rule.declarations:
-            if 'name' in look_for and 'value' in look_for:
-                if subtest_dec.name == look_for["name"] and str(subtest_dec.value.as_css()) == look_for["value"]:
-                    return True # found!
-            elif 'value' in look_for:
-                 if look_for["value"] in subtest_dec.value.as_css():
-                    return True # found!
-            elif 'name' in look_for:
-                if subtest_dec.name == look_for["name"]:
-                    return True # found!
-        return False
+        if rule.at_keyword is None or rule.at_keyword == '@page':
+            for subtest_dec in rule.declarations:
+                if 'name' in look_for and 'value' in look_for:
+                    if subtest_dec.name == look_for["name"] and str(subtest_dec.value.as_css()) == look_for["value"]:
+                        return True # found!
+                elif 'value' in look_for:
+                     if look_for["value"] in subtest_dec.value.as_css():
+                        return True # found!
+                elif 'name' in look_for:
+                    if subtest_dec.name == look_for["name"]:
+                        return True # found!
+            return False
+        elif rule.at_keyword == '@media':
+            found = False
+            for subrule in rule.rules:
+                found = found or self._found_in_rule(subrule, look_for)
+            return found
             
     def _analyze_results(self):
         ios = self._results["ios"]
