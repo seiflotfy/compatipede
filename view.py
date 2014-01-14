@@ -220,7 +220,8 @@ class Tab(WebKit.WebView):
         self.window.destroy()
 
     def set_title(self, title):
-        self.window.set_title(title)
+        if title:
+            self.window.set_title(title)
 
     def simplfy(self):
         self.execute_script(SIMPLFY_SCRIPT)
@@ -243,7 +244,7 @@ class Tab(WebKit.WebView):
 if __name__ == "__main__":
     uri = sys.argv[1]
     ua = sys.argv[2]
-    port = int(sys.argv[3]) if len(sys.argv[3]) > 3 else None
+    port = int(sys.argv[3]) if len(sys.argv) > 3 else None
     mainloop = GLib.MainLoop()
     load_plugins()
     root_view = Tab(uri, ua, port)
