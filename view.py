@@ -51,6 +51,7 @@ class Tab(WebKit.WebView):
         self._user_agent = FOS_UA if tab_type == "fos" else IOS_UA
 
         self._tab_type = tab_type
+        self._had_wml_content = False
         self._resources = []
         self._css = {}
         self._settings = self.get_settings()
@@ -115,6 +116,7 @@ class Tab(WebKit.WebView):
                    "css": self.style_sheets,
                    "redirects": self._redirects,
                    "src": self.source,
+                   "wml": self._had_wml_content,
                    "plugin_results": get_plugin_results()}
         try:
             json_body = json.dumps(results)
@@ -142,7 +144,7 @@ class Tab(WebKit.WebView):
             except Exception, ex:
                 print ex
             mainloop.quit()
-            print "==================>", self.get_load_status(),\
+            print "==================>", self._tab_type, self.get_load_status(),\
                 self._uri, time.time() - self._time
             return False
         return True
@@ -174,6 +176,10 @@ class Tab(WebKit.WebView):
         if resource.get_mime_type() == "text/css":
             encoding = chardet.detect(resource.get_data().str)
             self._css[resource.get_uri()] = unicode(resource.get_data().str, encoding["encoding"])
+        elif resource.get_mime_type() == "text/vnd.wap.wml":
+            self._had_wml_content = True
+            # TODO: Can we stop loading and just send results here?
+            #self._tear_down()
 
     def _on_resource_request_starting(self, view, frame, resource, request,
                                       response):

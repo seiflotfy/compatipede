@@ -159,6 +159,10 @@ class Browser(dbus.service.Object):
         if len(style_issues["fos"])>0:
             results["pass"] = False
             results["status_determined_by"].append('style_issues')
+        if 'wml' in self._results:
+            results["pass"] = False;
+            results["wml"] = True;
+            results["status_determined_by"].append('wml')
             
         print "\n=========\n%s\n=========" % self._uri
         print json.dumps(results, sort_keys=True,
