@@ -1,0 +1,8 @@
+{
+    "name": "m3u8-links",
+    "javascript": "(function(){for(var i=0,l;l=document.links[i];i++){if(l.href && /\\.m3u8/i.test(l.href))return true;}return false;})()",
+    "injectionTime": "load",
+    "dataSource": "returnValue",
+    "bug": "",
+    "targetSite": ""
+}

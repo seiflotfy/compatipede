@@ -1,0 +1,8 @@
+{
+    "name": "m3u8-videos",
+    "javascript": "(function(){for(var i=0,el,vs=document.getElementsByTagName('video');el=vs[i];i++){var src = el.src || el.currentSrc; if(el.currentSrc && /\\.m3u8/i.test(el.currentSrc))return true;}return false;})()",
+    "injectionTime": "load",
+    "dataSource": "returnValue",
+    "bug": "",
+    "targetSite": ""
+}
