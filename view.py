@@ -76,6 +76,7 @@ class Tab(WebKit.WebView):
         self.load_uri(uri)
         self.set_title("%s %s" % (tab_type, uri))
         self._time = time.time()
+        self._done = False
         GLib.timeout_add(1000, self._tear_down)
 
     @property
@@ -130,7 +131,11 @@ class Tab(WebKit.WebView):
         iface.push_result(json_body)
 
     def _tear_down(self):
-        if self.ready or time.time() - self._start_time >= 10:
+        if self._done:
+            return False
+        if self.ready or time.time() - self._start_time >= 10 or self._had_wml_content:
+            self._done = True
+            self.stop_loading()
             t = time.time()
             while time.time() - t < 3:
                 Gtk.main_iteration_do(True)
@@ -179,7 +184,7 @@ class Tab(WebKit.WebView):
         elif resource.get_mime_type() == "text/vnd.wap.wml":
             self._had_wml_content = True
             # TODO: Can we stop loading and just send results here?
-            #self._tear_down()
+            self._tear_down()
 
     def _on_resource_request_starting(self, view, frame, resource, request,
                                       response):
