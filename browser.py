@@ -84,6 +84,7 @@ class Browser(dbus.service.Object):
                 print 'unknown at_keyword: "'+str(rule.at_keyword)+'"'
         
     def _process_concrete_rule(self, rule, look_for_decl):
+        mappings = { '-webkit-box-flex':'flex', '-webkit-box-align':'align-items', '-webkit-box-pack':'justify-content', '-webkit-box-orient':'flex-direction', '-webkit-box-ordinal-group':'order' }
         for dec in rule.declarations:
             # We need to check if there is an unprefixed equivalent
             # among the other declarations in this rule..
@@ -95,8 +96,8 @@ class Browser(dbus.service.Object):
                     look_for_decl.append({"name":dec.name, "value":value[8:], "dec":dec, "sel":rule.selector.as_css()})
             elif dec.name == 'display' and (value == 'box' or value == 'flexbox'): # special check for flexbox
                 look_for_decl.append({"name":dec.name, "value":"flex", "dec":dec, "sel":rule.selector.as_css()})
-            elif '-webkit-box-flex' in dec.name:
-                look_for_decl.append({"name":"flex", "dec":dec, "sel":rule.selector.as_css()})
+            elif dec.name in mappings:
+                look_for_decl.append({"name": mappings[dec.name], "dec":dec, "sel":rule.selector.as_css()})
             elif '-webkit-' in dec.name:
                 # remove -webkit- prefix
                 look_for_decl.append({"name" : dec.name[8:], "dec":dec, "sel":rule.selector.as_css()})
