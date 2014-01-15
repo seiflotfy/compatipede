@@ -2,6 +2,7 @@ import os
 import json
 import glob
 import re
+import json
 from urlparse import urlparse
 
 plugin_result_data = {}
@@ -41,6 +42,8 @@ def filter_and_inject_plugins(tab, uri, timing):
             if tab.get_title() != old_title:
                 if not name in plugin_result_data:
                     plugin_result_data[name] = tab.get_title()
+                    if "dataType" in plugin and plugin["dataType"] == 'json':
+                        plugin_result_data[name] = json.loads(plugin_result_data[name])
                 tab.set_title(old_title)
         else:
             tab.execute_script(plugin["javascript"])
@@ -54,6 +57,8 @@ def handle_console_message(tab, message):
             if found is not None:
                 if not name in plugin_result_data:
                     plugin_result_data[name] = found.group(0)
+                    if "dataType" in plugin and plugin["dataType"] == 'json':
+                        plugin_result_data[name] = json.loads(plugin_result_data[name])
 
 
 def get_plugin_results():

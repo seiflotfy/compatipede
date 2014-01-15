@@ -5,13 +5,14 @@ Plug-ins live in the "plugins" folder. They are loaded by scanning this folder f
 A plug-in looks much like this:
 
 {
-    "name": "window.orientation-usage",
+    "name": "window-orientation-usage",
     "javascript": "window.__defineGetter__('orientation', function(){console.log('window.orientation used')});",
     "injectionTime": "start",
     "dataSource": "console",
     "dataRegexp": "window\.orientation used",
     "bug": "123456",
-    "targetSite": ""
+    "targetSite": "",
+    "markMatchesAs": "fail"
 }
 
 Property definitions:
@@ -34,6 +35,7 @@ Property definitions:
 
 * "targetSite" can limit the test to be applied on a specific site only. The value will be compared strictly (no wildcards supported) against the hostname of a site. If it's empty or not set, the plug-in runs everywhere.
 
+* "markMatchesAs", if set, lets the plugin set a final pass/fail status for the website. The value can be either "pass" or "fail". If multiple plugins with markMatchesAs all run on a given website and end up disagreeing, "fail" will win.
 
 Another example of a potential plugin, say we find a generic problem with a common script - for example jQuery 1.6 (just making this up..)
 
