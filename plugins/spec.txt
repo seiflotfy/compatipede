@@ -12,7 +12,8 @@ A plug-in looks much like this:
     "dataRegexp": "window\.orientation used",
     "bug": "123456",
     "targetSite": "",
-    "markMatchesAs": "fail"
+    "markMatchesAs": "fail",
+    "dataType":"json"
 }
 
 Property definitions:
@@ -36,6 +37,8 @@ Property definitions:
 * "targetSite" can limit the test to be applied on a specific site only. The value will be compared strictly (no wildcards supported) against the hostname of a site. If it's empty or not set, the plug-in runs everywhere.
 
 * "markMatchesAs", if set, lets the plugin set a final pass/fail status for the website. The value can be either "pass" or "fail". If multiple plugins with markMatchesAs all run on a given website and end up disagreeing, "fail" will win.
+
+* "dataType" can be set to "json" to make the script parse the returned data as JSON.
 
 Another example of a potential plugin, say we find a generic problem with a common script - for example jQuery 1.6 (just making this up..)
 
