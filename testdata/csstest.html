@@ -28,6 +28,15 @@
     display: box;
     display: flex;
 }
+.reportThis4{
+    background:-webkit-gradient(linear, 0 0, 0 100%, from(#fff), to(#edeae0));
+    background:gradient(linear, 0 0, 0 100%, from(#fff), to(#edeae0));
+    /* Note: gradient() function doesn't exist */
+}
+.dontReportThis3{
+    background:-webkit-gradient(linear, 0 0, 0 100%, from(#fff), to(#edeae0));
+    background:linear-gradient(to bottom #edeae0);
+}
 </style>
 </head>
 <body class="reportThis1">
@@ -36,6 +45,7 @@
 <p class="reportThis3">This is filler text</p>
 <p class="reportThis4">This is filler text</p>
 <p class="dontReportThis2">This is filler text</p>
+<p class="dontReportThis3">This is filler text</p>
 
 </body>
 </html>

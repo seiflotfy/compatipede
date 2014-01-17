@@ -10,7 +10,7 @@ import sys
 import time
 import os
 import tinycss
-
+import re
 
 BUS = dbus.SessionBus(mainloop=DBusGMainLoop())
 BROWSER_BUS_NAME = 'org.mozilla.mozcompat.browser%i'
@@ -84,20 +84,26 @@ class Browser(dbus.service.Object):
                 print 'unknown at_keyword: "'+str(rule.at_keyword)+'"'
         
     def _process_concrete_rule(self, rule, look_for_decl):
-        mappings = { '-webkit-box-flex':'flex', '-webkit-box-align':'align-items', '-webkit-box-pack':'justify-content', '-webkit-box-orient':'flex-direction', '-webkit-box-ordinal-group':'order' }
+        name_mappings = { '-webkit-box-flex':'flex', '-webkit-box-align':'align-items', '-webkit-box-pack':'justify-content', '-webkit-box-orient':'flex-direction', '-webkit-box-ordinal-group':'order' }
+        value_mappings = { '-webkit-box':'flex', '-webkit-gradient':'linear-gradient' }
         for dec in rule.declarations:
             # We need to check if there is an unprefixed equivalent
             # among the other declarations in this rule..
             value = dec.value.as_css()
+            # TODO: we should actually look for just a part of the value, like -webkit-box, without all the params that may require 
+            # different syntaxes..
             if '-webkit-' in value:
-                if '-webkit-box' in value:
-                    look_for_decl.append({"name":dec.name, "value":"flex", "dec":dec, "sel":rule.selector.as_css()})
+                re.split("( |\(|\t)", value.strip())[0]
+                #value = value.strip().split(' ',1)[0] # we want only the keyword, not the rest (for complex values like -webkit-gradient)
+                if value in value_mappings:
+                    look_for_decl.append({"name":dec.name, "value":value_mappings[value], "dec":dec, "sel":rule.selector.as_css()})
                 else:
-                    look_for_decl.append({"name":dec.name, "value":value[8:], "dec":dec, "sel":rule.selector.as_css()})
-            elif dec.name == 'display' and (value == 'box' or value == 'flexbox'): # special check for flexbox
+                    value = value[8:] # just strip out -webkit- and look for the rest
+                    look_for_decl.append({"name":dec.name, "value":value, "dec":dec, "sel":rule.selector.as_css()})
+            elif dec.name == 'display' and (value in ('box', 'flexbox', '-ms-flexbox')): # special check for flexbox
                 look_for_decl.append({"name":dec.name, "value":"flex", "dec":dec, "sel":rule.selector.as_css()})
-            elif dec.name in mappings:
-                look_for_decl.append({"name": mappings[dec.name], "dec":dec, "sel":rule.selector.as_css()})
+            elif dec.name in name_mappings:
+                look_for_decl.append({"name": name_mappings[dec.name], "dec":dec, "sel":rule.selector.as_css()})
             elif '-webkit-' in dec.name:
                 # remove -webkit- prefix
                 look_for_decl.append({"name" : dec.name[8:], "dec":dec, "sel":rule.selector.as_css()})
@@ -106,13 +112,13 @@ class Browser(dbus.service.Object):
         if rule.at_keyword is None or rule.at_keyword == '@page':
             for subtest_dec in rule.declarations:
                 if 'name' in look_for and 'value' in look_for:
-                    if subtest_dec.name == look_for["name"] and str(subtest_dec.value.as_css()) == look_for["value"]:
+                    if subtest_dec.name == look_for["name"] and str(subtest_dec.value.as_css()) in (look_for["value"], '-moz-'+look_for["value"]):
                         return True # found!
                 elif 'value' in look_for:
                      if look_for["value"] in subtest_dec.value.as_css():
                         return True # found!
                 elif 'name' in look_for:
-                    if subtest_dec.name == look_for["name"]:
+                    if subtest_dec.name in (look_for["name"], '-moz-'+look_for["name"]):
                         return True # found!
             return False
         elif rule.at_keyword == '@media':
