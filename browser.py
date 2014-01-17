@@ -93,8 +93,6 @@ class Browser(dbus.service.Object):
             # We need to check if there is an unprefixed equivalent
             # among the other declarations in this rule..
             value = dec.value.as_css()
-            # TODO: we should actually look for just a part of the value, like -webkit-box, without all the params that may require 
-            # different syntaxes..
             if '-webkit-' in value:
                 value = self._css_function_name(value)
                 #value = value.strip().split(' ',1)[0] # we want only the keyword, not the rest (for complex values like -webkit-gradient)

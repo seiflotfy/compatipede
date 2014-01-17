@@ -183,7 +183,6 @@ class Tab(WebKit.WebView):
             self._css[resource.get_uri()] = unicode(resource.get_data().str, encoding["encoding"])
         elif resource.get_mime_type() == "text/vnd.wap.wml":
             self._had_wml_content = True
-            # TODO: Can we stop loading and just send results here?
             self._tear_down()
 
     def _on_resource_request_starting(self, view, frame, resource, request,
