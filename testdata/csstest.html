@@ -3,12 +3,12 @@
 <head><title>CSS compat report test</title>
 <style>
 /* .test, does have equivalent -webkit- and -moz- styles, but lacks unprefixed. We may want to warn about that.. */
-.reportThis1{
+.maybeReportThis1{
     -webkit-animation: foo;
     -moz-animation: foo;
 }
 /* This definitely needs a warning... */
-.reportThis2{
+.reportThis1{
     -webkit-transform: rotate(45deg);
 }
 /* We do NOT want this reported. We don't care about prefixed stuff if there are equivalent non-prefixed properties.
@@ -18,10 +18,10 @@
     -webkit-transform:  rotate(55deg);
      transform: rotate(55deg);
 }
-.reportThis3{
+.reportThis2{
     display: -webkit-flex;
 }
-.reportThis4{
+.reportThis3{
     display: box;
 }
 .dontReportThis2{

@@ -82,7 +82,10 @@ class Browser(dbus.service.Object):
                     self._process_rule(subrule, look_for_decl)
             else:
                 print 'unknown at_keyword: "'+str(rule.at_keyword)+'"'
-        
+                
+    def _css_function_name(self, css_str):
+        return re.split("( |\(|\t)", css_str.strip())[0]
+
     def _process_concrete_rule(self, rule, look_for_decl):
         name_mappings = { '-webkit-box-flex':'flex', '-webkit-box-align':'align-items', '-webkit-box-pack':'justify-content', '-webkit-box-orient':'flex-direction', '-webkit-box-ordinal-group':'order' }
         value_mappings = { '-webkit-box':'flex', '-webkit-gradient':'linear-gradient' }
@@ -93,7 +96,7 @@ class Browser(dbus.service.Object):
             # TODO: we should actually look for just a part of the value, like -webkit-box, without all the params that may require 
             # different syntaxes..
             if '-webkit-' in value:
-                re.split("( |\(|\t)", value.strip())[0]
+                value = self._css_function_name(value)
                 #value = value.strip().split(' ',1)[0] # we want only the keyword, not the rest (for complex values like -webkit-gradient)
                 if value in value_mappings:
                     look_for_decl.append({"name":dec.name, "value":value_mappings[value], "dec":dec, "sel":rule.selector.as_css()})
@@ -107,15 +110,15 @@ class Browser(dbus.service.Object):
             elif '-webkit-' in dec.name:
                 # remove -webkit- prefix
                 look_for_decl.append({"name" : dec.name[8:], "dec":dec, "sel":rule.selector.as_css()})
-    
+        
     def _found_in_rule(self, rule, look_for):
         if rule.at_keyword is None or rule.at_keyword == '@page':
             for subtest_dec in rule.declarations:
                 if 'name' in look_for and 'value' in look_for:
-                    if subtest_dec.name == look_for["name"] and str(subtest_dec.value.as_css()) in (look_for["value"], '-moz-'+look_for["value"]):
+                    if subtest_dec.name == look_for["name"] and self._css_function_name(subtest_dec.value.as_css()) in (look_for["value"], '-moz-'+look_for["value"]):
                         return True # found!
                 elif 'value' in look_for:
-                     if look_for["value"] in subtest_dec.value.as_css():
+                     if look_for["value"] in self._css_function_name(subtest_dec.value.as_css()):
                         return True # found!
                 elif 'name' in look_for:
                     if subtest_dec.name in (look_for["name"], '-moz-'+look_for["name"]):
