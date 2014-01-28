@@ -93,7 +93,11 @@ class Browser(dbus.service.Object):
             # We need to check if there is an unprefixed equivalent
             # among the other declarations in this rule..
             value = dec.value.as_css()
-            if '-webkit-' in value:
+            if '-webkit-' in value and '-webkit-' in dec.name:
+                # *both* property name and property value is -webkit- prefixed
+                # this needs special casing so we don't look for "equivalents" like "-webkit-transition:transform" and "transition:-webkit-transform" :-)
+                look_for_decl.append({"name":dec.name[8:], "value": self._css_function_name(value)[8:], "dec":dec, "sel":rule.selector.as_css()})
+            elif '-webkit-' in value:
                 value = self._css_function_name(value)
                 #value = value.strip().split(' ',1)[0] # we want only the keyword, not the rest (for complex values like -webkit-gradient)
                 if value in value_mappings:
