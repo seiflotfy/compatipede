@@ -1,7 +1,7 @@
-mozcompat
+Compatipede
 =========
 
-Mozcompat is a website compatability check framework/infrastructure
+Compatipede is a website compatability check framework/infrastructure
 
 The General idea is to have several webcompat processes running listening to
 a RabbitMQ service, from which they are fed with URLs.
