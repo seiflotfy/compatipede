@@ -22,19 +22,19 @@ A plug-in looks much like this:
 
 ## Property definitions:
 
-* `name` uniquely identifies this plug-in. If two plug-ins have the same name, only one of them should run. It is recommended to make the name of the plugin.json file equal the name of the plug-in.
+* `name` uniquely identifies this plug-in. If two plug-ins have the same name, an error is thrown. It is recommended to make the name of the plugin.json file equal the name of the plug-in. Caveat: if data gets stored to a MongoDB, the name should not contain any period (.) characters.
 
 * `javascript` is a string of JS that will be injected into the page.
 
 * `injectionTime` controls when the injected JS will run. It takes values "start" or "load" ("start" being ASAP - before any page JS runs, "load" being when the load event would fire).
 
-* `dataSource` tells the frameword where to read the javascript output. It can be set to "console" or "returnValue". If it's "returnValue" the injected JS needs to evaluate to something other than "undefined" to get anythong logged.
+* `dataSource` tells the framework where to read the javascript output. It can be set to "console" or "returnValue". If it's "returnValue" the injected JS needs to evaluate to something other than "undefined" to get anythong logged.
 
 * `dataRegexp` only needs setting if the dataSource is "console" - anything that matches the regexp will be logged to the database tagged with the site and the "plug-in"'s name. So outcome of this might be:
 
     ```
     "example.com": {
-       "window.orientation-usage" : "window.orientation used",
+       "window-orientation-usage" : "window.orientation used",
     }
     ```
 
@@ -50,7 +50,7 @@ Another example of a potential plugin, say we find a generic problem with a comm
 
 ```
 {
-    "name": "jQuery-1.6-check",
+    "name": "jQuery-1-6-check",
     "javascript": "try{ jQuery.fn.jquery === "1.6" }catch(e){}",
     "injectionTime": "load",
     "dataSource": "returnValue",
@@ -63,7 +63,7 @@ So this JS evaluates to true if site runs jQuery 1.6, returns nothing (well, und
 ```
 { 
   "example.com": {
-    "jQuery-1.6-check" : "true",
+    "jQuery-1-6-check" : "true",
     ...
 }
 ```
