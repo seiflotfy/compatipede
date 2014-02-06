@@ -1,0 +1,8 @@
+{
+    "name": "old-iScroll-check",
+    "injectionTime": "load",
+    "javascript": "if (window.iScroll && !window.IScroll){console.log('old iScroll.js detected');}",
+    "dataSource": "console",
+    "dataRegexp": "old iScroll\\.js detected",
+    "bug": "941076"
+}
