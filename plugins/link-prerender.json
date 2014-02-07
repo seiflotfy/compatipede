@@ -1,0 +1,7 @@
+{
+    "name": "link-prerender",
+    "javascript": "(function(){for(var elms=document.getElementsByTagName('link'),el,i=0; el=elms[i]; i++){if(/prerender/i.test(el.rel))return 'has prerender link element';};})();",
+    "injectionTime": "load",
+    "dataSource": "returnValue"
+}
+
