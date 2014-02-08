@@ -1,0 +1,7 @@
+{
+    "name": "link-rel-icon",
+    "javascript": "(function(){var linkrellist=document.querySelectorAll('link[rel*="icon"]');var data=[];for(var i=0,link;link=linkrellist[i];i++){data.push({});var relvalues={};relvalues=link.rel.trim().split(/\s+/);data[i].relvalue=relvalues;if(link.getAttribute('sizes')){var sizevalues={};sizevalues=link.getAttribute('sizes').trim().split(/\s+/);data[i].sizes=sizevalues}};return JSON.stringify(data)})();",
+    "injectionTime": "load",
+    "dataSource": "returnValue",
+    "dataType": "json"
+}
