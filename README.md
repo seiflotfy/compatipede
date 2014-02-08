@@ -1,7 +1,7 @@
 Compatipede
 =========
 
-Compatipede is a website compatability check framework/infrastructure
+Compatipede is a website compatibility check framework/infrastructure
 
 The General idea is to have several webcompat processes running listening to
 a RabbitMQ service, from which they are fed with URLs.
@@ -9,8 +9,8 @@ a RabbitMQ service, from which they are fed with URLs.
 A URL is then opened once using the Firefox UserAgent and another time using the
 WebKit UserAgent and checked for compatibility:
 - Equal redirects
-- CSS style compatability
-- Source code compatability
+- CSS style compatibility
+- Source code compatibility
 - Other custom tests
 
 Resuls of each run are written to a MongoDB
