@@ -1,6 +1,6 @@
 {
     "name": "link-prerender",
-    "javascript": "(function(){for(var elms=document.getElementsByTagName('link'),el,i=0; el=elms[i]; i++){if(/prerender/i.test(el.rel))return 'has prerender link element';};})();",
+    "javascript": "(function(){for(var elms=document.getElementsByTagName('link'),el,i=0; el=elms[i]; i++){if(/prerender/i.test(el.rel))return 'has prerender link element';};return false;})();",
     "injectionTime": "load",
     "dataSource": "returnValue"
 }
