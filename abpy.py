@@ -1,7 +1,10 @@
-import re
+import re, os
 from os.path import expanduser
 
 EASYLIST_PATH = expanduser("~/Downloads/easylist.txt")
+
+if not os.path.exists(EASYLIST_PATH):
+    EASYLIST_PATH = None
 
 RE_TOK = re.compile('\W')
 
@@ -79,21 +82,22 @@ class Rule(object):
 class Filter(object):
     def __init__(self):
         self.index = {}
-        with open(EASYLIST_PATH) as f:
-            for rul in f.xreadlines():
-                if rul.startswith('!'):  # Comment
-                    continue
-                if '##' in rul:  # HTML rule
-                    continue
-                try:
-                    rule = Rule(rul)
-                except RuleSyntaxError:
-                    print 'syntax error in ', rul
-                for tok in rule.get_tokens():
-                    if len(tok) > 2:
-                        if tok not in self.index:
-                            self.index[tok] = []
-                        self.index[tok].append(rule)
+        if EASYLIST_PATH != None:
+            with open(EASYLIST_PATH) as f:
+                for rul in f.xreadlines():
+                    if rul.startswith('!'):  # Comment
+                        continue
+                    if '##' in rul:  # HTML rule
+                        continue
+                    try:
+                        rule = Rule(rul)
+                    except RuleSyntaxError:
+                        print 'syntax error in ', rul
+                    for tok in rule.get_tokens():
+                        if len(tok) > 2:
+                            if tok not in self.index:
+                                self.index[tok] = []
+                            self.index[tok].append(rule)
 
     def match(self, url, elementtype=None):
         tokens = RE_TOK.split(url)
