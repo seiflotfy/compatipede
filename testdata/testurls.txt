@@ -5,3 +5,4 @@ http://www.hallvord.com/temp/moz/compatTesterTesting/csstest2.html
 http://www.hallvord.com/temp/moz/compatTesterTesting/csstest3.html
 http://www.hallvord.com/temp/moz/compatTesterTesting/csstest4.html
 http://www.hallvord.com/temp/moz/compatTesterTesting/jsredirect.htm
+http://www.hallvord.com/temp/moz/compatTesterTesting/prerender.html
