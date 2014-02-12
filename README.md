@@ -1,7 +1,7 @@
 Compatipede
 =========
 
-Compatipede is a website compatability check framework/infrastructure
+Compatipede is a website compatibility check framework/infrastructure
 
 The General idea is to have several webcompat processes running listening to
 a RabbitMQ service, from which they are fed with URLs.
@@ -9,8 +9,8 @@ a RabbitMQ service, from which they are fed with URLs.
 A URL is then opened once using the Firefox UserAgent and another time using the
 WebKit UserAgent and checked for compatibility:
 - Equal redirects
-- CSS style compatability
-- Source code compatability
+- CSS style compatibility
+- Source code compatibility
 - Other custom tests
 
 Resuls of each run are written to a MongoDB
@@ -24,32 +24,37 @@ For now this only runs on Linux machines.
 
 The requirments for this service to run are:
 
-gir1.2-webkit-3.0
-gir1.2-soup-2.4
-xvfb
-gobject-introspection
-python-dbus
-dbus-x11
-rabbitmq-server
+- gir1.2-webkit-3.0
+- gir1.2-soup-2.4
+- xvfb
+- gobject-introspection
+- python-dbus
+- dbus-x11
+- rabbitmq-server
+- mongodb-server
 
+To install them all, run
 
-sudo apt-get install gir1.2-webkit-3.0 gir1.2-soup-2.4 xvfb gobject-introspection python-dbus dbus-x11 rabbitmq-server
+    sudo apt-get install gir1.2-webkit-3.0 gir1.2-soup-2.4 xvfb gobject-introspection python-dbus dbus-x11 rabbitmq-server mongodb-server
+
 It is recommended to run it on Ubuntu 13.04 or higher.
 
 In addition, the following Python modules must be available:
-tinycss
-pika
-pymongo
+- tinycss
+- pika
+- pymongo
 
-They can all be installed with pip
+They can all be installed with pip:
+
+    sudo pip install tinycss pika pymongo
 
 
 How to run it:
 ==============
 
-python webcompat.py listen
+    python webcompat.py listen
 
 sets up a process that will handle a queue of URLs, run tests and store data.
 To add URLs to the queue, do this in a separate terminal window:
 
-python webcompat.py push http://example.com
+    python webcompat.py push http://example.com
