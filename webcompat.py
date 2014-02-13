@@ -45,15 +45,20 @@ if len(sys.argv) == 2 and sys.argv[1] == "listen":
     channel.basic_consume(callback, queue='mozcompat', no_ack=True)
     channel.start_consuming()
 
-elif len(sys.argv) == 2 and sys.argv[1] == "rwcy":
+elif (len(sys.argv) == 2 or len(sys.argv) == 3) and sys.argv[1] == "rwcy":
     response = urllib2.urlopen(RWCY_URL)
     js_str = response.read()[len(RWCY_PREFIX):].strip()
     js = json.loads(js_str)
+    start_from = 0
+    if len(sys.argv) == 3:
+        start_from = sys.argv[2]
+    counter = 0
     for key in js["hostIndex"].keys():
-        if key[-1] == ".":
+        if key[-1] == "." or counter < start_from:
             continue
         url = "http://%s" % key
         channel.basic_publish(exchange='', routing_key='mozcompat', body=url)
+        counter += 1
 
 elif len(sys.argv) == 3:
     if sys.argv[1] == "push":
