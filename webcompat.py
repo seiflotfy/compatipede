@@ -51,14 +51,15 @@ elif (len(sys.argv) == 2 or len(sys.argv) == 3) and sys.argv[1] == "rwcy":
     js = json.loads(js_str)
     start_from = 0
     if len(sys.argv) == 3:
-        start_from = sys.argv[2]
-    counter = 0
+        start_from = int(sys.argv[2])
+        print 'rwcy lists from index %i' % start_from
+    counter = -1
     for key in js["hostIndex"].keys():
+        counter += 1
         if key[-1] == "." or counter < start_from:
             continue
         url = "http://%s" % key
         channel.basic_publish(exchange='', routing_key='mozcompat', body=url)
-        counter += 1
 
 elif len(sys.argv) == 3:
     if sys.argv[1] == "push":
