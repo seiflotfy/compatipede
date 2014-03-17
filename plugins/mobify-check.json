@@ -1,0 +1,8 @@
+{
+    "name": "mobify-check",
+    "javascript": "(function(){for(var s, i=0; s=document.scripts[i]; i++){if(s.src.indexOf('mobify')>-1 && document.body.firstChild.textContent.indexOf('load:function')!=-1)return s.src;}})()",
+    "injectionTime": "load",
+    "dataSource": "returnValue",
+    "bug": "",
+    "targetSite": ""
+}
