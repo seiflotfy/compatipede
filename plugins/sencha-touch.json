@@ -1,0 +1,8 @@
+{
+    "name": "sencha-touch-check",
+    "injectionTime": "load",
+    "javascript": "try{if(Ext&&typeof Ext.gesture=='object'){console.log('Sencha Touch (<= 1.0) detected')}}catch(e){}try{if(Ext&&Ext.supports&&typeof Ext.supports.Transitions=='boolean'){console.log('Sencha Touch (1.1.0) detected')}}catch(e){}try{if(Ext&&!Ext.supports&&Ext.getVersion&&Ext.getVersion('touch').version){console.log('Sencha Touch ('+Ext.getVersion('touch').version+') detected')}}catch(e){}",
+    "dataSource": "console",
+    "dataRegexp": "Sencha\\sTouch\\s\\([<=\\s\\d.]+\\)\\sdetected",
+    "bug": "895485"
+}
