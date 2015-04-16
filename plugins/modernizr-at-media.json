@@ -1,0 +1,9 @@
+{
+    "name": "modernizr-at-media",
+    "injectionTime": "resource_scan",
+    "regexp": "['\"]@media[\"'][^;]+transform-3d",
+    "regexp-not": "@supports\\s*\\(perspective:",
+    "bug": "1151622",
+    "comment": "Old modernizr script detected. Problems similar to the one described in bug 1151622 may occur on this site. If HTML has a no-3dtransforms class, see if removing it helps.",
+    "markMatchesAs": "fail"
+}

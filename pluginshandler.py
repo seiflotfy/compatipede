@@ -48,6 +48,34 @@ def filter_and_inject_plugins(tab, uri, timing):
         else:
             tab.execute_script(plugin["javascript"])
 
+def run_resource_scan_plugins(resource_code):
+    print( "will run resource scan on %d bytes" % len(resource_code))
+    for name in all_plugins:
+        plugin = all_plugins[name]
+        if plugin["injectionTime"] != 'resource_scan':
+            continue
+        if 'regexp' not in plugin:
+            raise 'resource_scan plugins must have regexp set'
+        if 'comment' in plugin:
+            comment = plugin['comment']
+        else:
+            comment = 'matched resource'
+        rx = re.compile(plugin['regexp'])
+        if re.match(rx, resource_code):
+            print('initial match!')
+            # we have a match. If there is a regexp-not it must also
+            # *not* match this regexp to be a true match
+            if 'regexp-not' in plugin:
+                print('2nd match!')
+                rx = re.compile(plugin['regexp-not'])
+                if re.match(rx, resource_code):
+                    # regexp-not is typically used to find indication of a newer-than-problematic
+                    # version. Since it matched, this plugin should not flag a problem after all.
+                    pass
+                else:
+                    plugin_result_data[name] = comment
+            else:
+                plugin_result_data[name] = comment
 
 def handle_console_message(tab, message):
     for name in all_plugins:
@@ -63,7 +91,7 @@ def handle_console_message(tab, message):
 
 def get_plugin_results():
     # method returns { "pluginFoo": {"result": "foobar"}, "overall_status": True, "status_determinators": ["pluginFoo"] }
-    # The pluginFoo property will only be present if that plugin matched the content. 
+    # The pluginFoo property will only be present if that plugin matched the content.
     # The "overall_status", "status_determinators" properties are optional too
     return_obj = {}
     # Plugin matches can optionally override overall pass/fail
@@ -73,7 +101,7 @@ def get_plugin_results():
         return_obj[name] = {"result": plugin_result_data[name]}
         # plugins that say "fail" will override those that say "pass" if conflicting
         # this is handed by the "status is not False" condition here:
-        if "markMatchesAs" in all_plugins[name] and (status is not False): 
+        if "markMatchesAs" in all_plugins[name] and (status is not False):
             status = all_plugins[name]["markMatchesAs"] == 'pass' # 'True' if status should be set to Pass, 'False' otherwise
             status_determinators.append(name) # keep track of what factors changed the status output
     if status is not None:

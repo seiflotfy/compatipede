@@ -17,8 +17,8 @@ from utils import IOS_UA, FOS_UA
 from utils import SIMPLFY_SCRIPT, IOS_SPOOF_SCRIPT
 from utils import FOS_SPOOF_SCRIPT, is_host_and_path_same
 from pluginshandler import load_plugins, filter_and_inject_plugins
-from pluginshandler import handle_console_message, get_plugin_results
-
+from pluginshandler import handle_console_message, get_plugin_results, run_resource_scan_plugins
+import pdb
 
 BUS = dbus.SessionBus(mainloop=DBusGMainLoop())
 BROWSER_BUS_NAME = 'org.mozilla.mozcompat.browser%i'
@@ -184,6 +184,11 @@ class Tab(WebKit.WebView):
         elif resource.get_mime_type() == "text/vnd.wap.wml":
             self._had_wml_content = True
             self._tear_down()
+        mime = resource.get_mime_type()
+        if 'text' in mime or 'javascript' in mime:
+            print(resource.get_uri())
+            run_resource_scan_plugins(resource.get_data().str)
+
 
     def _on_resource_request_starting(self, view, frame, resource, request,
                                       response):

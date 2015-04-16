@@ -26,7 +26,7 @@ A plug-in looks much like this:
 
 * `javascript` is a string of JS that will be injected into the page.
 
-* `injectionTime` controls when the injected JS will run. It takes values "start" or "load" ("start" being ASAP - before any page JS runs, "load" being when the load event would fire).
+* `injectionTime` controls when the injected JS will run. It takes values "start" or "load" ("start" being ASAP - before any page JS runs, "load" being when the load event would fire). It can also be set to "resource_scan" to indicate that the regexp shall be matched against all included JS and CSS files.
 
 * `dataSource` tells the framework where to read the javascript output. It can be set to "console" or "returnValue". If it's "returnValue" the injected JS needs to evaluate to something other than "undefined" to get anythong logged.
 
@@ -41,6 +41,10 @@ A plug-in looks much like this:
 * `bug` is a reference to some bug this test is relevant for. This value, if set, is just passed through to the results log.
 
 * `targetSite` can limit the test to be applied on a specific site only. The value will be compared strictly (no wildcards supported) against the hostname of a site. If it's empty or not set, the plug-in runs everywhere.
+
+* `regexp`, if set, is the regular expression all CSS and JS will be matched against.
+
+* `comment` can be a description of the plugin or expected results. At some point, we may want systems that add comments to bugs automatically, the comment property should be suitable as a bug description or annotation.
 
 * `markMatchesAs`, if set, lets the plugin set a final pass/fail status for the website. The value can be either "pass" or "fail". If multiple plugins with markMatchesAs all run on a given website and end up disagreeing, "fail" will win.
 
