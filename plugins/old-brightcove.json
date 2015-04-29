@@ -1,0 +1,8 @@
+{
+    "name": "old-brightcove",
+    "injectionTime": "resource_scan",
+    "uri_regexp": "(brightcove\\.js|BrightcoveExperiences?\\.js|admin\\.brightcove\\.|c\\.brightcove\\.)",
+    "bug": "794100",
+    "comment": "Old Brightcove script detected. Videos will likely fail on this site (give a 'download Flash' message on FxOS and play sound only on Fx Android). ",
+    "markMatchesAs": "fail"
+}

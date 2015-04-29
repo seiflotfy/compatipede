@@ -44,6 +44,8 @@ A plug-in looks much like this:
 
 * `regexp`, if set, is the regular expression all CSS and JS will be matched against.
 
+* `uri_regexp`, if set, is the regular expression the *url* of CSS and JS will be matched against. Note: currently, *either* regexp or uri_regexp is supported, you can't set both.
+
 * `comment` can be a description of the plugin or expected results. At some point, we may want systems that add comments to bugs automatically, the comment property should be suitable as a bug description or annotation.
 
 * `markMatchesAs`, if set, lets the plugin set a final pass/fail status for the website. The value can be either "pass" or "fail". If multiple plugins with markMatchesAs all run on a given website and end up disagreeing, "fail" will win.

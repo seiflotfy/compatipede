@@ -48,27 +48,33 @@ def filter_and_inject_plugins(tab, uri, timing):
         else:
             tab.execute_script(plugin["javascript"])
 
-def run_resource_scan_plugins(resource_code):
-    print( "will run resource scan on %d bytes" % len(resource_code))
+def run_resource_scan_plugins(resource_code, resource_uri):
+    print( "will run resource scan on %d bytes - %s" % (len(resource_code), resource_uri))
     for name in all_plugins:
         plugin = all_plugins[name]
         if plugin["injectionTime"] != 'resource_scan':
             continue
-        if 'regexp' not in plugin:
-            raise 'resource_scan plugins must have regexp set'
+        if not ('regexp' in plugin or 'uri_regexp' in plugin):
+            raise 'resource_scan plugins must have a regexp set'
         if 'comment' in plugin:
-            comment = plugin['comment']
+            comment = '%s (%s)' % (plugin['comment'], resource_uri)
         else:
-            comment = 'matched resource'
-        rx = re.compile(plugin['regexp'])
-        if re.match(rx, resource_code):
+            comment = 'matched resource (%s)' % resource_uri
+        if 'regexp' in plugin:
+            rx = re.compile(plugin['regexp'])
+            match_against_str = resource_code
+        else:
+            rx = re.compile(plugin['uri_regexp'])
+            match_against_str = resource_uri
+            print('will match %s against %s' %(plugin['uri_regexp'], resource_uri))
+        if re.search(rx, match_against_str):
             print('initial match!')
             # we have a match. If there is a regexp-not it must also
             # *not* match this regexp to be a true match
             if 'regexp-not' in plugin:
-                print('2nd match!')
                 rx = re.compile(plugin['regexp-not'])
-                if re.match(rx, resource_code):
+                if re.search(rx, match_against_str):
+                    print('2nd match!')
                     # regexp-not is typically used to find indication of a newer-than-problematic
                     # version. Since it matched, this plugin should not flag a problem after all.
                     pass

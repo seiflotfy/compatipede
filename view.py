@@ -186,8 +186,8 @@ class Tab(WebKit.WebView):
             self._tear_down()
         mime = resource.get_mime_type()
         if 'text' in mime or 'javascript' in mime:
-            print(resource.get_uri())
-            run_resource_scan_plugins(resource.get_data().str)
+            #print(resource.get_uri())
+            run_resource_scan_plugins(resource.get_data().str, resource.get_uri())
 
 
     def _on_resource_request_starting(self, view, frame, resource, request,
