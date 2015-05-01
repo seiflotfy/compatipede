@@ -49,13 +49,15 @@ def filter_and_inject_plugins(tab, uri, timing):
             tab.execute_script(plugin["javascript"])
 
 def run_resource_scan_plugins(resource_code, resource_uri):
-    print( "will run resource scan on %d bytes - %s" % (len(resource_code), resource_uri))
+    #print( "will run resource scan on %d bytes - %s" % (len(resource_code), resource_uri))
     for name in all_plugins:
         plugin = all_plugins[name]
         if plugin["injectionTime"] != 'resource_scan':
             continue
         if not ('regexp' in plugin or 'uri_regexp' in plugin):
             raise 'resource_scan plugins must have a regexp set'
+        if 'regexp' in plugin and 'uri_regexp' in plugin:
+            raise 'resource_scan plugins must have regexp OR uri_regexp set, not both' # TODO: consider supporting this and make code do what you would expect..
         if 'comment' in plugin:
             comment = '%s (%s)' % (plugin['comment'], resource_uri)
         else:
