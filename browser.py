@@ -11,6 +11,9 @@ import time
 import os
 import tinycss
 import re
+import pdb
+import tldextract
+import requests
 
 BUS = dbus.SessionBus(mainloop=DBusGMainLoop())
 BROWSER_BUS_NAME = 'org.mozilla.mozcompat.browser%i'
@@ -18,6 +21,7 @@ BROWSER_OBJ_PATH = '/org/mozilla/mozcompat'
 BROWSER_INTERFACE = 'org.mozilla.mozcompat'
 BASEPATH = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
 VIEW_CMD = "python " + BASEPATH + "/view.py %s %s %i"
+DB_SERVER = 'http://compatentomology.com.paas.allizom.org/data/'
 
 
 class Browser(dbus.service.Object):
@@ -33,6 +37,37 @@ class Browser(dbus.service.Object):
         subprocess.Popen([VIEW_CMD % (uri, "ios", self._pid)], shell=True)
         subprocess.Popen([VIEW_CMD % (uri, "fos", self._pid)], shell=True)
 
+    def _normalize_domain(self_, domain):
+            tmp = tldextract.extract(domain)
+            # we remove "meaningless-ish" prefixes only
+            if not tmp.subdomain in ['www', '', 'm']:
+                tmp = '%s.%s.%s' % (tmp.subdomain, tmp.domain, tmp.suffix)
+            else:
+                tmp = '%s.%s' % (tmp.domain, tmp.suffix)
+            return tmp
+
+    def _save_data_to_db(self, domain_name, url, testdata_fx, testdata_wk):
+        destination_url = '%s%s' % (DB_SERVER, domain_name)
+        file_desc = testdata_fx['file_desc']
+        file_desc.update(testdata_wk['file_desc'])
+        multiple_files = []
+        del testdata_fx['file_desc']
+        del testdata_wk['file_desc']
+        multiple_files = []
+        for filename in file_desc:
+            multiple_files.append(('screenshot',(os.path.basename(filename),open(file_desc[filename]['full_path'], 'rb'), 'image/png')))
+            del file_desc[filename]['full_path'] # don't leak local directory paths onto the internet..
+        post_data = {"data": testdata_fx}
+        post_data["data"].update(testdata_wk)
+        post_data["data"] = json.dumps(post_data["data"])
+        post_data['initial_url'] = url
+        post_data['file_desc'] = json.dumps(file_desc)
+        #print(post_data)
+        #print('about to send data to %s' % destination_url)
+        req = requests.post(destination_url, files=multiple_files, data=post_data)
+        #print(req.text)
+
+
     def _check_source_is_similar(self, tab1, tab2):
         diff = difflib.SequenceMatcher(None, tab1["src"], tab2["src"])
         ratio = diff.quick_ratio()
@@ -42,7 +77,7 @@ class Browser(dbus.service.Object):
         return tab1["redirects"] == tab2["redirects"]
 
     def _find_css_problems(self, sheets):
-        issues = []
+        issues_json = []
         try:
             parser = tinycss.make_parser()
             for key, value in sheets.iteritems():
@@ -59,26 +94,21 @@ class Browser(dbus.service.Object):
                     # the look_for_decl list will now be empty
                     for issue in look_for_decl:
                         dec = issue["dec"];
-                        issues.append(dec.name +
-                                      ' used without equivalents for '+issue["sel"]+' in ' +
-                                      key + ':' + str(dec.line) +
-                                      ':' + str(dec.column) +
-                                      ', value: ' +
-                                      dec.value.as_css())
+                        issues_json.append({"file": key, "selector": issue["sel"], "property":dec.name, "value":dec.value.as_css()})
 
         except Exception, e:
             print e
             return ["ERROR PARSING CSS"]
-        return issues
+        return issues_json
     
     def _process_rule(self, rule, look_for_decl):
             if rule.at_keyword is None or rule.at_keyword == '@page':
                 self._process_concrete_rule(rule, look_for_decl)
             elif rule.at_keyword == '@media':
-                print rule.rules
+                #print rule.rules
                 for subrule in rule.rules:
-                    print 'subrule'
-                    print subrule
+                    #print 'subrule'
+                    #print subrule
                     self._process_rule(subrule, look_for_decl)
             else:
                 print 'unknown at_keyword: "'+str(rule.at_keyword)+'"'
@@ -182,7 +212,26 @@ class Browser(dbus.service.Object):
         print "PASS:", results["pass"]
         print "=========\n"
         self._db.insert(results)
+        # some data massage.. plugin result structure is sort of over-complicated
+        fxdata = {fos["ua"]:{fos["engine"]:{"redirects":fos["redirects"], "final_url":fos["final_url"], "css_problems":style_issues["fos"], "js_problems":[], "plugin_results": self._filter_plugin_results(plugin_results["fos"]), "state":results["pass"], "failing_because":results["status_determined_by"]}}}
+        wkdata = {ios["ua"]:{ios["engine"]:{"redirects":ios["redirects"], "final_url":ios["final_url"], "css_problems":style_issues["ios"], "js_problems":[], "plugin_results":self._filter_plugin_results(plugin_results["ios"]), "state":results["pass"], "failing_because":results["status_determined_by"]}}}
+        # we need file_desc..
+        fxdata['file_desc'] = {os.path.basename(fos['screenshot']):{"engine":fos["engine"], "ua":fos["ua"], "full_path":fos["screenshot"]}}
+        wkdata['file_desc'] = {os.path.basename(ios['screenshot']):{"engine":ios["engine"], "ua":ios["ua"], "full_path":ios["screenshot"]}}
+        self._save_data_to_db(self._normalize_domain(self._uri), self._uri, fxdata, wkdata)
         mainloop.quit()
+
+    def _filter_plugin_results(self, old_plugin_results):
+        new_plugin_results = {}
+        new_plugin_results.update(old_plugin_results["mobile-signs-statistics"]["result"])
+        for property in old_plugin_results:
+                if property == "mobile-signs-statistics":
+                        continue
+                if "result" in old_plugin_results[property]:
+                        new_plugin_results[property] = old_plugin_results[property]["result"]
+                else:
+                        new_plugin_results = old_plugin_results[property]
+        return new_plugin_results
 
     @dbus.service.method(dbus_interface=BROWSER_INTERFACE, in_signature='s')
     def push_result(self, results):

@@ -113,12 +113,12 @@ class Tab(WebKit.WebView):
         return self.get_load_status() in (wkls.FINISHED, wkls.FAILED)
 
     def send_results(self):
-        results = {"type": self._tab_type,
+        results = {"type": self._tab_type, "ua": self._user_agent, "engine": "webkit", "initial_url":self._uri, "final_url" : self._final_url,
                    "css": self.style_sheets,
                    "redirects": self._redirects,
                    "src": self.source,
                    "wml": self._had_wml_content,
-                   "plugin_results": get_plugin_results()}
+                   "plugin_results": get_plugin_results(), "screenshot":self._screenshot}
         try:
             json_body = json.dumps(results)
         except Exception,e:
@@ -140,7 +140,7 @@ class Tab(WebKit.WebView):
             while time.time() - t < 3:
                 Gtk.main_iteration_do(True)
             try:
-                #self.take_screenshot()
+                self.take_screenshot()
                 self.simplfy()
                 if self._port:
                     self.send_results()
@@ -204,6 +204,7 @@ class Tab(WebKit.WebView):
     def _on_onload_event(self, view, frame):
         # Check if the URL in the main frame is the one we initially requested
         current_uri = self.get_main_frame().get_uri()
+        self._final_url = current_uri
         if not is_host_and_path_same(current_uri,  self._uri):
             # If this redirect isn't already recorded, there is something fishy in the state of our redirect tracking..
             # JS navigation, probably..
@@ -239,7 +240,7 @@ class Tab(WebKit.WebView):
         self._settings.set_property('user-agent', user_agent)
 
     def take_screenshot(self, width=-1, height=-1):
-        path = "./screenshots/%s--%s" % (self._uri.split("//")[1],
+        path = "./screenshots/%s--%s" % (self._uri.split("/")[2],
                                          self._tab_type)
         print path
         dview = self.get_dom_document().get_default_view()
@@ -248,6 +249,7 @@ class Tab(WebKit.WebView):
         surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
         self.draw(cairo.Context(surf))
         surf.write_to_png(path)
+        self._screenshot = path
 
 
 if __name__ == "__main__":
