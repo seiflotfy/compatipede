@@ -5,7 +5,7 @@ from urlparse import urlparse
 from gi.repository import Gtk
 
 IOS_UA = 'Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_3_2 like Mac OS X; en-us) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8H7 Safari/6533.18.5'
-FOS_UA = 'Mozilla/5.0 (Mobile; rv:18.0) Gecko/18.0 Firefox/18.0'
+FOS_UA = 'Mozilla/5.0 (Mobile; rv:38.0) Gecko/38.0 Firefox/38.0'
 
 
 SIMPLFY_SCRIPT = """
@@ -57,6 +57,8 @@ platform:'Linux i686'
 
 
 def is_host_and_path_same(url1, url2):
+    if not (url1 and url2):
+            return False
     parsed1 = urlparse(url1)
     parsed2 = urlparse(url2)
     return parsed1[1] == parsed2[1] and parsed1[2] == parsed2[2]
