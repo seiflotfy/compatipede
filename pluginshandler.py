@@ -42,8 +42,9 @@ def filter_and_inject_plugins(tab, uri, timing):
             if tab.get_title() != old_title:
                 if not name in plugin_result_data:
                     plugin_result_data[name] = tab.get_title()
-                    if "dataType" in plugin and plugin["dataType"] == 'json':
+                    if "dataType" in plugin and plugin["dataType"] == 'json' or plugin_result_data[name] in ['true', 'false']:
                         plugin_result_data[name] = json.loads(plugin_result_data[name])
+                                
                 tab.set_title(old_title)
         else:
             tab.execute_script(plugin["javascript"])
@@ -68,15 +69,12 @@ def run_resource_scan_plugins(resource_code, resource_uri):
         else:
             rx = re.compile(plugin['uri_regexp'])
             match_against_str = resource_uri
-            print('will match %s against %s' %(plugin['uri_regexp'], resource_uri))
         if re.search(rx, match_against_str):
-            print('initial match!')
             # we have a match. If there is a regexp-not it must also
             # *not* match this regexp to be a true match
             if 'regexp-not' in plugin:
                 rx = re.compile(plugin['regexp-not'])
                 if re.search(rx, match_against_str):
-                    print('2nd match!')
                     # regexp-not is typically used to find indication of a newer-than-problematic
                     # version. Since it matched, this plugin should not flag a problem after all.
                     pass
@@ -86,6 +84,7 @@ def run_resource_scan_plugins(resource_code, resource_uri):
                 plugin_result_data[name] = comment
 
 def handle_console_message(tab, message):
+    returnValue = False # "not found"
     for name in all_plugins:
         plugin = all_plugins[name]
         if plugin["dataSource"] == "console":
@@ -95,6 +94,8 @@ def handle_console_message(tab, message):
                     plugin_result_data[name] = found.group(0)
                     if "dataType" in plugin and plugin["dataType"] == 'json':
                         plugin_result_data[name] = json.loads(plugin_result_data[name])
+                        returnValue = True
+    return returnValue
 
 
 def get_plugin_results():
