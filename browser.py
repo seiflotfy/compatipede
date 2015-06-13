@@ -21,8 +21,13 @@ BROWSER_OBJ_PATH = '/org/mozilla/mozcompat'
 BROWSER_INTERFACE = 'org.mozilla.mozcompat'
 BASEPATH = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
 VIEW_CMD = "python " + BASEPATH + "/view.py %s %s %i"
-DB_SERVER = 'http://compatentomology.com.paas.allizom.org/data/'
+DB_SERVER = "http://compatentomology.com.paas.allizom.org/data/"
 
+# CSS errors are abundant..
+# many of them are relatively harmless. We use a list of properties and a regexp for values to filter out
+# the CSS issues we're interested in tracking..
+LOG_CSS_PROPS = ["flex", "box-flex", "box", "box-align", "flex-direction", "box-pack", "box-ordinal-group", "appearance"]
+LOG_CSS_VALUES = re.compile("(-webkit-gradient|-webkit-linear|-webkit-radial|-webkit-flex|-webkit-box|flexbox|inline-box|inline-flexbox)")
 
 class Browser(dbus.service.Object):
     def __init__(self, uri):
@@ -65,7 +70,7 @@ class Browser(dbus.service.Object):
         #print(post_data)
         #print('about to send data to %s' % destination_url)
         req = requests.post(destination_url, files=multiple_files, data=post_data)
-        #print(req.text)
+        print(req.text)
 
 
     def _check_source_is_similar(self, tab1, tab2):
@@ -94,7 +99,13 @@ class Browser(dbus.service.Object):
                     # the look_for_decl list will now be empty
                     for issue in look_for_decl:
                         dec = issue["dec"];
-                        issues_json.append({"file": key, "selector": issue["sel"], "property":dec.name, "value":dec.value.as_css()})
+                        name = dec.name
+                        if '-webkit-' in name:
+                                name = name[8:]
+                        if name in LOG_CSS_PROPS or re.search(LOG_CSS_VALUES, dec.value.as_css()):
+                                issues_json.append({"file": key, "selector": issue["sel"], "property":dec.name, "value":dec.value.as_css()})
+                        else:
+                                print('ignored %s ' % dec.name)
 
         except Exception, e:
             print e
@@ -223,11 +234,12 @@ class Browser(dbus.service.Object):
 
     def _filter_plugin_results(self, old_plugin_results):
         new_plugin_results = {}
-        new_plugin_results.update(old_plugin_results["mobile-signs-statistics"]["result"])
+        if "mobile-signs-statistics" in old_plugin_results:
+                new_plugin_results.update(old_plugin_results["mobile-signs-statistics"]["result"])
         for property in old_plugin_results:
                 if property == "mobile-signs-statistics":
                         continue
-                if "result" in old_plugin_results[property]:
+                if type(old_plugin_results[property]) == dict and "result" in old_plugin_results[property]:
                         new_plugin_results[property] = old_plugin_results[property]["result"]
                 else:
                         new_plugin_results = old_plugin_results[property]
